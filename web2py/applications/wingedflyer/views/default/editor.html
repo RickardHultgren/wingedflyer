@@ -1,0 +1,91 @@
+{{extend 'layout.html'}}
+
+<div class="container-fluid mt-3">
+    <div class="row">
+        <!-- Sidebar with flyer list -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Your Flyers</h5>
+                    <a href="{{=URL('logout')}}" class="btn btn-sm btn-outline-secondary">Logout</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{=URL('editor')}}" 
+                       class="list-group-item list-group-item-action {{if flyer_id is None or flyer_id == '':}}active{{pass}}">
+                        <strong>+ New Flyer</strong>
+                    </a>
+                    {{for flyer in flyers:}}
+                    <a href="{{=URL('editor', args=[flyer.id])}}" 
+                       class="list-group-item list-group-item-action {{if flyer_id and str(flyer_id) == str(flyer.id):}}active{{pass}}">
+                        {{=flyer.title}}<br>
+                        <small class="text-muted">{{=flyer.updated_on.strftime('%Y-%m-%d %H:%M')}}</small>
+                    </a>
+                    {{pass}}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Editor area -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{if current_flyer:}}Edit{{else:}}Create New{{pass}} Flyer</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{=URL('save')}}">
+                        {{if current_flyer:}}
+                        <input type="hidden" name="flyer_id" value="{{=current_flyer.id}}">
+                        {{pass}}
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{=current_flyer.title if current_flyer else ''}}" 
+                                   placeholder="Enter flyer title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="content" class="form-label">
+                                Markdown Content
+                                <a href="https://www.markdownguide.org/cheat-sheet/" 
+                                   target="_blank" class="text-muted small">(Markdown Guide)</a>
+                            </label>
+                            <textarea class="form-control font-monospace" id="content" 
+                                      name="content" rows="15" required>{{=current_flyer.content if current_flyer else ''}}</textarea>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save & Preview</button>
+                            {{if current_flyer:}}
+                            <a href="{{=URL('preview', args=[current_flyer.id])}}" 
+                               class="btn btn-secondary">Preview</a>
+                            <a href="{{=URL('flyer', args=[current_flyer.id])}}" 
+                               class="btn btn-info" target="_blank">View Public Page</a>
+                            <a href="{{=URL('qr', args=[current_flyer.id])}}" 
+                               class="btn btn-success" target="_blank">View QR Code</a>
+                            <a href="{{=URL('delete', args=[current_flyer.id])}}" 
+                               class="btn btn-danger" 
+                               onclick="return confirm('Are you sure you want to delete this flyer?')">Delete</a>
+                            {{pass}}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {{if current_flyer:}}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5>Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Public Flyer URL:</strong><br>
+                    <code>{{=URL('flyer', args=[current_flyer.id], scheme=True, host=True)}}</code></p>
+                    
+                    <p><strong>QR Code URL:</strong><br>
+                    <code>{{=URL('qr', args=[current_flyer.id], scheme=True, host=True)}}</code></p>
+                </div>
+            </div>
+            {{pass}}
+        </div>
+    </div>
+</div>
