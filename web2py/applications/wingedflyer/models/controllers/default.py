@@ -3,21 +3,37 @@ import qrcode
 from io import BytesIO
 import base64
 
-# Hardcoded credentials (for demo purposes)
-WRITER_USERNAME = "writer"
-WRITER_PASSWORD = "demo"
+
+# ---- Action for login/register/etc (required for auth) -----
+def user():
+    """
+    exposes:
+    http://..../[app]/default/user/login
+    http://..../[app]/default/user/logout
+    http://..../[app]/default/user/register
+    http://..../[app]/default/user/profile
+    http://..../[app]/default/user/retrieve_password
+    http://..../[app]/default/user/change_password
+    http://..../[app]/default/user/bulk_register
+    use @auth.requires_login()
+        @auth.requires_membership('team name')
+        @auth.requires_permission('read','table name',record_id)
+    to decorate functions that need access control
+    also notice there is http://..../[app]/appadmin/manage/auth to allow administrator to manage users
+    """
+    return dict(form=auth())
 
 
 def index():
     """
     Home page - redirects to login if not authenticated, otherwise to editor.
     """
-    if session.authenticated:
+    if auth.is_logged_in():
         redirect(URL('editor'))
     else:
-        redirect(URL('login'))
+        redirect(URL('user'))
 
-
+'''
 def login():
     """
     Writer login page with hardcoded authentication.
@@ -35,30 +51,32 @@ def login():
     
     return dict(error=form_error)
 
-
 def logout():
     """
     Logout and clear session.
     """
     session.authenticated = None
     redirect(URL('login'))
+'''
 
-
+@auth.requires_login()
 def editor():
     """
     Markdown editor page (writer-only).
     Allows creating and editing flyers.
     """
     # Check authentication
-    if not session.authenticated:
-        redirect(URL('login'))
+    if not auth.is_logged_in():
+        redirect(URL('user'))
     
     # Get flyer ID if editing existing
     flyer_id = request.args(0) if request.args else None
     
     # Fetch all flyers for the list
-    flyer = db(db.flyer).select(orderby=~db.flyer.updated_on)
-    
+    if 'flyer' in db.tables():
+        flyer = db(db.flyer).select(orderby=~db.flyer.updated_on)
+    else:
+        flyer = []
     
     # Load existing flyer if ID provided
     current_flyer = None
@@ -67,7 +85,7 @@ def editor():
     
     return dict(flyer=flyer, current_flyer=current_flyer, flyer_id=flyer_id)
 
-
+@auth.requires_login()
 def save():
     """
     Save or update a flyer.
@@ -78,7 +96,7 @@ def save():
     flyer_id = request.vars.flyer_id
     
     
-    if not session.authenticated:
+    if not auth.is_logged_in():
         return dict(success=False, message="Not authenticated")
     
     if request.vars.thecontent is None:
@@ -109,7 +127,7 @@ def preview():
     Preview page for writer to see rendered markdown.
     """
     # Check authentication
-    if not session.authenticated:
+    if not auth.is_logged_in():
         redirect(URL('login'))
     
     flyer_id = request.args(0)
@@ -189,7 +207,7 @@ def delete():
     """
     Delete a flyer (writer-only).
     """
-    if not session.authenticated:
+    if not auth.is_logged_in():
         redirect(URL('login'))
     
     flyer_id = request.args(0)
@@ -198,3 +216,14 @@ def delete():
         db.commit()
     
     redirect(URL('editor'))
+
+
+
+
+
+
+
+
+
+
+
