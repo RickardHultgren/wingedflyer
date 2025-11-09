@@ -1,3 +1,6 @@
+'''from gluon.http import redirect
+import json
+'''
 import markdown
 import qrcode
 from io import BytesIO
@@ -32,6 +35,7 @@ def index():
         redirect(URL('editor'))
     else:
         redirect(URL('user'))
+    return
 
 '''
 def login():
@@ -65,6 +69,7 @@ def editor():
     Markdown editor page (writer-only).
     Allows creating and editing flyers.
     """
+    
     # Check authentication
     if not auth.is_logged_in():
         redirect(URL('user'))
@@ -80,46 +85,87 @@ def editor():
     
     # Load existing flyer if ID provided
     current_flyer = None
-    if flyer_id:
+
+    if flyer_id: #If editing a flyer
         current_flyer = db.flyer(flyer_id)
-    
+    else:
+        # Defensive: ensure table exists
+        if 'flyer' not in db.tables():
+            current_flyer = None
+            flyer_id = None  # Nothing we can generate yet
+        else:
+            # Count existing rows
+            count = db(db.flyer).count()
+
+            # Start looking for the next free id
+            candidate_id = count + 1
+
+            # Loop until an unused id is found
+            # NOTE: db.flyer(<id>) returns None if id doesn't exist
+            while db.flyer(candidate_id):
+                candidate_id += 1
+
+            flyer_id = candidate_id
+            current_flyer = None  # because it's a new flyer
     return dict(flyer=flyer, current_flyer=current_flyer, flyer_id=flyer_id)
 
 @auth.requires_login()
 def save():
     """
-    Save or update a flyer.
+    Save or update a flyer (defensive).
     """
-    # Check authentication
-    title = request.vars.title or "Untitled Flyer"
-    thecontent = request.vars.thecontent
-    flyer_id = request.vars.flyer_id
-    
-    
-    if not auth.is_logged_in():
-        return dict(success=False, message="Not authenticated")
-    
-    if request.vars.thecontent is None:
-        return dict(success=False, message="No content provided")
-    
-    
-    
-    if flyer_id and db.flyer(flyer_id):
-        db(db.flyer.id == flyer_id).update(
-            title=title,
-            thecontent=thecontent
-        )
-    else:
-        flyer_id = db.flyer.insert(
-            title=title,
-            thecontent=thecontent
-        )
-    
-    
-    
-    
-    db.commit()
-    redirect(URL('preview', args=[flyer_id]))
+    # ensure table exists
+    if 'flyer' not in db.tables():
+        # optionally create table or return an error message
+        # For now, fail gracefully:
+        session.flash = "Flyer storage not available (table missing)."
+        redirect(URL('editor'))
+    # normalize incoming flyer_id (request.vars are strings)
+    incoming_id = request.vars.get('flyer_id') or None
+    try:
+        incoming_id = int(incoming_id) if incoming_id not in (None, '', 'None') else None
+    except (ValueError, TypeError):
+        incoming_id = None
+
+    # gather fields
+    title = (request.vars.get('title') or "Untitled Flyer").strip()
+    thecontent = request.vars.thecontent  # allow empty string if desired
+    # basic validation
+    if thecontent is None:
+        # no content provided
+        session.flash = "No content provided."
+        redirect(URL('editor', args=[incoming_id] if incoming_id else None))
+    try:
+        if incoming_id and db.flyer(incoming_id):
+            # update existing
+            db(db.flyer.id == incoming_id).update(
+                title=title,
+                thecontent=thecontent,
+                updated_on=request.now  # if you have an updated_on field (optional)
+            )
+            new_id = incoming_id
+        else:
+            # insert new
+            new_id = db.flyer.insert(
+                title=title,
+                thecontent=thecontent
+            )
+
+        db.commit()
+    except Exception as e:
+        # rollback and show friendly message
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        # Log the error to server logs
+        current.logger.error("Failed to save flyer: %s" % str(e))
+        session.flash = "Failed to save flyer (database error)."
+        # redirect back to editor; do not expose raw exception in production
+        redirect(URL('editor', args=[incoming_id] if incoming_id else None))
+
+    # success: go to preview using the numeric id
+    redirect(URL('preview', args=[new_id]))
 
 
 def preview():
@@ -128,7 +174,7 @@ def preview():
     """
     # Check authentication
     if not auth.is_logged_in():
-        redirect(URL('login'))
+        redirect(URL('user'))
     
     flyer_id = request.args(0)
     if not flyer_id:
@@ -145,7 +191,7 @@ def preview():
     return dict(flyer=flyer, html_content=html_content)
 
 
-def flyer():
+def view_flyer():
     """
     Public display page for viewing flyers.
     Route: /qrier/default/flyer/<id>
@@ -175,8 +221,10 @@ def qr():
     if not flyer_id:
         raise HTTP(404, "Flyer not found")
     
-    flyer = db.flyer(flyer_id)
-    if not flyer:
+    try:
+        flyer = db.flyer(flyer_id)
+    #if not flyer:
+    except:
         raise HTTP(404, "Flyer not found")
     
     # Generate the full URL to the flyer

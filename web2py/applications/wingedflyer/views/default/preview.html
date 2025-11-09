@@ -6,7 +6,8 @@
             <h4>Preview: {{=flyer.title}}</h4>
             <div class="btn-group">
                 <a href="{{=URL('editor', args=[flyer.id])}}" class="btn btn-secondary">Edit</a>
-                <a href="{{=URL('flyer', args=[flyer.id])}}" class="btn btn-info" target="_blank">View Public</a>
+                
+                <a href="{{=URL('view_flyer', args=[flyer.id])}}" class="btn btn-info" target="_blank">View Public</a>
                 <a href="{{=URL('qr', args=[flyer.id])}}" class="btn btn-success" target="_blank">Get QR Code</a>
             </div>
         </div>
