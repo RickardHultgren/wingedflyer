@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{=flyer.title}} - WingedFlyer</title>
+    <meta name="description" content="{{=flyer.thecontent[:150]}}...">
+    
+    <!-- Optimize for mobile & low bandwidth -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" 
+          rel="stylesheet">
+    
+<style>
+    /* Mobile-first reset */
+    * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    body {
+        background: #f8f9fa;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        line-height: 1.6;
+        color: #2d3748;
+        padding: 0;
+        margin: 0;
+        /* Prevent horizontal scroll on mobile */
+        overflow-x: hidden;
+    }
+    
+    .flyer-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        min-height: 100vh;
+    }
+    
+    /* Header - mobile optimized */
+    .flyer-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem 1rem;
+        text-align: center;
+    }
+    
+    .flyer-header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 0.75rem;
+        line-height: 1.2;
+        word-wrap: break-word;
+    }
+    
+    .flyer-meta {
+        font-size: 0.8rem;
+        opacity: 0.95;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    
+    .flyer-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        white-space: nowrap;
+    }
+    
+    /* Content area - mobile optimized */
+    .flyer-content {
+        padding: 1.5rem 1rem;
+        /* Ensure images don't overflow */
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+    
+    /* Markdown styling - mobile readable */
+    .flyer-content h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1a202c;
+        margin: 1.5rem 0 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid #667eea;
+        line-height: 1.2;
+    }
+    
+    .flyer-content h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2d3748;
+        margin: 1.25rem 0 0.75rem;
+        line-height: 1.3;
+    }
+    
+    .flyer-content h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #4a5568;
+        margin: 1rem 0 0.5rem;
+        line-height: 1.3;
+    }
+    
+    .flyer-content p {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+    
+    .flyer-content ul, .flyer-content ol {
+        margin: 0 0 1rem;
+        padding-left: 1.5rem;
+    }
+    
+    .flyer-content li {
+        margin-bottom: 0.5rem;
+        line-height: 1.6;
+    }
+    
+    /* Touch-friendly links */
+    .flyer-content a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.2s;
+        /* Increase touch target */
+        padding: 0.25rem 0;
+        display: inline-block;
+    }
+    
+    .flyer-content a:active {
+        border-bottom-color: #667eea;
+        background: rgba(102, 126, 234, 0.1);
+    }
+    
+    /* Mobile-optimized images */
+    .flyer-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        /* Prevent layout shift */
+        display: block;
+    }
+    
+    .flyer-content blockquote {
+        margin: 1rem 0;
+        padding: 0.75rem 1rem;
+        background: #f7fafc;
+        border-left: 4px solid #667eea;
+        border-radius: 0 8px 8px 0;
+        font-style: italic;
+        color: #4a5568;
+        font-size: 0.95rem;
+    }
+    
+    /* Mobile-friendly code blocks */
+    .flyer-content code {
+        background: #edf2f7;
+        color: #e53e3e;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-family: 'Courier New', monospace;
+        word-break: break-all;
+    }
+    
+    .flyer-content pre {
+        background: #2d3748;
+        color: #e2e8f0;
+        padding: 0.75rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 1rem 0;
+        font-size: 0.85rem;
+        /* Enable momentum scrolling on iOS */
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .flyer-content pre code {
+        background: none;
+        color: inherit;
+        padding: 0;
+        word-break: normal;
+    }
+    
+    /* Mobile-optimized tables */
+    .flyer-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: 0.85rem;
+        /* Enable horizontal scroll if needed */
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .flyer-content th, .flyer-content td {
+        padding: 0.5rem;
+        border: 1px solid #e2e8f0;
+        text-align: left;
+        /* Prevent text wrapping in tables */
+        white-space: nowrap;
+    }
+    
+    .flyer-content th {
+        background: #f7fafc;
+        font-weight: 600;
+        color: #2d3748;
+        position: sticky;
+        top: 0;
+    }
+    
+    .flyer-content hr {
+        margin: 1.5rem 0;
+        border: none;
+        border-top: 2px solid #e2e8f0;
+    }
+    
+    /* Footer - mobile optimized */
+    .flyer-footer {
+        padding: 1.5rem 1rem;
+        background: #f7fafc;
+        border-top: 1px solid #e2e8f0;
+        text-align: center;
+    }
+    
+    .flyer-footer-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Touch-friendly footer buttons */
+    .btn-footer {
+        padding: 0.875rem 1.25rem;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: transform 0.15s, box-shadow 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 44px;
+        width: 100%;
+    }
+    
+    .btn-primary-footer {
+        background: #667eea;
+        color: white;
+        border: none;
+    }
+    
+    .btn-primary-footer:active {
+        background: #5a67d8;
+        transform: scale(0.98);
+        color: white;
+    }
+    
+    .btn-outline-footer {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+    
+    .btn-outline-footer:active {
+        background: #667eea;
+        color: white;
+        transform: scale(0.98);
+    }
+    
+    .flyer-powered-by {
+        font-size: 0.85rem;
+        color: #718096;
+        margin-top: 1rem;
+        line-height: 1.6;
+    }
+    
+    .flyer-powered-by a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    
+    .flyer-powered-by small {
+        display: block;
+        margin-top: 0.25rem;
+        color: #a0aec0;
+        font-size: 0.75rem;
+    }
+    
+    /* Tablet (landscape phones and small tablets) */
+    @media (min-width: 576px) {
+        .flyer-header {
+            padding: 2rem 1.5rem;
+        }
+        
+        .flyer-header h1 {
+            font-size: 1.75rem;
+        }
+        
+        .flyer-meta {
+            font-size: 0.85rem;
+            gap: 1rem;
+        }
+        
+        .flyer-content {
+            padding: 2rem 1.5rem;
+        }
+        
+        .flyer-content h1 {
+            font-size: 1.75rem;
+        }
+        
+        .flyer-content h2 {
+            font-size: 1.5rem;
+        }
+        
+        .flyer-content h3 {
+            font-size: 1.25rem;
+        }
+        
+        .flyer-content p {
+            font-size: 1.05rem;
+        }
+        
+        .flyer-footer-actions {
+            flex-direction: row;
+            justify-content: center;
+        }
+        
+        .btn-footer {
+            flex: 0 1 auto;
+            width: auto;
+            min-width: 140px;
+        }
+        
+        .flyer-content table {
+            font-size: 0.95rem;
+        }
+        
+        .flyer-content th, .flyer-content td {
+            padding: 0.75rem;
+        }
+    }
+    
+    /* Desktop */
+    @media (min-width: 992px) {
+        .flyer-header {
+            padding: 2.5rem 2rem;
+        }
+        
+        .flyer-content {
+            padding: 2.5rem 2rem;
+        }
+        
+        .btn-footer:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .flyer-content a:hover {
+            border-bottom-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+    }
+    
+    /* Very small phones */
+    @media (max-width: 359px) {
+        .flyer-header h1 {
+            font-size: 1.25rem;
+        }
+        
+        .flyer-meta {
+            font-size: 0.75rem;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .flyer-content {
+            padding: 1rem 0.75rem;
+        }
+        
+        .flyer-content h1 {
+            font-size: 1.25rem;
+        }
+        
+        .flyer-content h2 {
+            font-size: 1.1rem;
+        }
+        
+        .flyer-content h3 {
+            font-size: 1rem;
+        }
+        
+        .flyer-content p, .flyer-content li {
+            font-size: 0.95rem;
+        }
+        
+        .btn-footer {
+            font-size: 0.9rem;
+            padding: 0.75rem 1rem;
+        }
+    }
+    
+    /* Accessibility: Reduce motion for users who prefer it */
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+</style>
+</head>
+<body>
+    <div class="flyer-container">
+        <!-- Header -->
+        <div class="flyer-header">
+            <h1>{{=flyer.title}}</h1>
+            <div class="flyer-meta">
+                <span>📅 {{=flyer.updated_on.strftime('%B %d, %Y')}}</span>
+                <span>👁️ {{=flyer.view_count}} views</span>
+            </div>
+        </div>
+
+        <!-- Main Content (Rendered Markdown) -->
+        <div class="flyer-content">
+            {{=XML(html_content)}}
+        </div>
+
+        <!-- Footer -->
+        <div class="flyer-footer">
+            <div class="flyer-footer-actions">
+                <a href="{{=URL('qr', args=[flyer.id])}}" class="btn-footer btn-primary-footer">
+                    📱 Get QR Code
+                </a>
+                <button onclick="shareFlyer()" class="btn-footer btn-outline-footer">
+                    🔗 Share
+                </button>
+            </div>
+            
+            <div class="flyer-powered-by">
+                Created with <a href="{{=URL('index')}}" target="_blank">WingedFlyer</a> 🕊️
+                <br>
+                <small style="color: #a0aec0;">Making information fly to your customers</small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Share functionality (uses Web Share API if available)
+        async function shareFlyer() {
+            const shareData = {
+                title: "{{=flyer.title.replace("'", "\\'")}}",
+                text: "Check out this flyer: {{=flyer.title.replace("'", "\\'")}}",
+                url: window.location.href
+            };
+
+            try {
+                if (navigator.share) {
+                    // Mobile share
+                    await navigator.share(shareData);
+                } else {
+                    // Fallback: copy to clipboard
+                    await navigator.clipboard.writeText(window.location.href);
+                    alert('✅ Link copied to clipboard!');
+                }
+            } catch (err) {
+                // Final fallback
+                prompt('Copy this link:', window.location.href);
+            }
+        }
+    </script>
+</body>
+</html>
