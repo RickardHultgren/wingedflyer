@@ -28,12 +28,20 @@
             border-radius: 4px;
         }
     </style>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M24 64L0 12L20 24L32 48L44 24L64 12L40 64L32 48Z' fill='cyan'/></svg>" type="image/svg+xml">
 </head>
 <body>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
     <div class="container-fluid">
-        <a class="navbar-brand" href="{{=URL('index')}}">WingedFlyer</a>
+        <a class="navbar-brand" href="{{=URL('index')}}">
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <path d="M24 64L0 12L20 24L32 48L44 24L64 12L40 64L32 48Z" fill="cyan"/>
+  <!--path d="M32 44C30.9 44 30 43.1 30 42V40C30 38.9 30.9 38 32 38C33.1 38 34 38.9 34 40V42C34 43.1 33.1 44 32 44Z" fill="cyan"/-->
+</svg>
+
+
+            WingedFlyer</a>
         <div class="d-flex">
             {{if auth.is_logged_in():}}
                 <a href="{{=URL('user/logout')}}" class="btn btn-outline-secondary btn-sm">Logout</a>

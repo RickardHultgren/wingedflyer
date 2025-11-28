@@ -1,0 +1,48 @@
+{{extend 'layout.html'}}
+
+<h2>Vendor: {{=vendor.real_name}}</h2>
+
+<h3>Contact Info</h3>
+<p><strong>Address:</strong> {{=vendor.address}}</p>
+<p><strong>Phone:</strong> {{=vendor.phone}}</p>
+<p><strong>Email:</strong> {{=vendor.email}}</p>
+
+<h3>Loan Status</h3>
+<p><strong>Borrowed:</strong> {{=vendor.amount_borrowed}}</p>
+<p><strong>Paid Back:</strong> {{=vendor.amount_paid_back}}</p>
+
+<h3>Working Status</h3>
+<p>{{='Working now' if vendor.is_working else 'Not working'}}</p>
+
+<hr>
+
+<h3>Messages</h3>
+<ul>
+    {{for m in messages:}}
+    <li>
+        <strong>{{=m.created_on}} ({{=m.sender}}):</strong> {{=m.message}}
+    </li>
+    {{pass}}
+</ul>
+
+<hr>
+
+<h3>Send Message to Vendor</h3>
+<form action="{{=URL('fmi', 'send_message', args=[vendor.id])}}" method="post">
+    <textarea name="message" rows="3" style="width:100%;"></textarea>
+    <button class="btn-primary">Send</button>
+</form>
+
+<hr>
+
+<h3>Customer Page</h3>
+<p>
+    <a href="{{=URL('vendor', 'public', args=[vendor.username], scheme=True, host=True)}}" target="_blank">
+        Open Customer Page
+    </a>
+</p>
+<p>
+    <a href="{{=URL('vendor', 'qr', args=[vendor.username])}}" target="_blank">
+        View QR Code
+    </a>
+</p>

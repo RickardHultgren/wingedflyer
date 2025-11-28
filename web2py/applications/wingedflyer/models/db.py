@@ -1,6 +1,13 @@
 """
 Database models for WingedFlyer application.
 Lightweight, mobile-first flyer management.
+
+MFI
+
+
+B2C
+
+
 """
 
 from gluon.contrib.appconfig import AppConfig
