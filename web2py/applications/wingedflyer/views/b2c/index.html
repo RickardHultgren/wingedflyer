@@ -1,12 +1,12 @@
 {{extend 'layout.html'}}
 
-<h2>Vendor Dashboard</h2>
+<h2>b2c Dashboard</h2>
 
 <div class="section">
     <h3>Status</h3>
     <p>
         <strong>Working:</strong>
-        {{if vendor.is_working:}}
+        {{if b2c.is_working:}}
             <span style="color:green;">Yes</span>
         {{else:}}
             <span style="color:red;">No</span>
@@ -22,12 +22,12 @@
 
 <div class="section">
     <h3>Your Profile</h3>
-    <p><strong>Name:</strong> {{=vendor.real_name}}</p>
-    <p><strong>Address:</strong> {{=vendor.address}}</p>
-    <p><strong>Phone:</strong> {{=vendor.phone}}</p>
-    <p><strong>Email:</strong> {{=vendor.email}}</p>
-    <p><strong>Borrowed:</strong> {{=vendor.amount_borrowed}}</p>
-    <p><strong>Paid Back:</strong> {{=vendor.amount_paid_back}}</p>
+    <p><strong>Name:</strong> {{=b2c.real_name}}</p>
+    <p><strong>Address:</strong> {{=b2c.address}}</p>
+    <p><strong>Phone:</strong> {{=b2c.phone}}</p>
+    <p><strong>Email:</strong> {{=b2c.email}}</p>
+    <p><strong>Borrowed:</strong> {{=b2c.amount_borrowed}}</p>
+    <p><strong>Paid Back:</strong> {{=b2c.amount_paid_back}}</p>
 </div>
 
 <hr>
@@ -70,7 +70,7 @@
 
     <p>
         <a href="{{=URL('preview')}}">Preview</a> |
-        <a href="{{=URL('qr', args=[vendor.username])}}" target="_blank">Show QR Code</a> |
-        <a href="{{=URL('public', args=[vendor.username])}}" target="_blank">View Public Page</a>
+        <a href="{{=URL('qr', args=[b2c.username])}}" target="_blank">Show QR Code</a> |
+        <a href="{{=URL('public', args=[b2c.username])}}" target="_blank">View Public Page</a>
     </p>
 </div>

@@ -13,9 +13,9 @@ def index():
     if auth.user.role != 'mfi':
         redirect(URL('default', 'index'))
 
-    vendors = db(db.vendor_account.mfi_user_id == auth.user.id).select()
+    b2c = db(db.vendor_account.mfi_user_id == auth.user.id).select()
 
-    return dict(vendors=vendors)
+    return dict(b2c=b2c)
 
 
 @auth.requires_login()
