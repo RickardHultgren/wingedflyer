@@ -17,7 +17,9 @@ jQuery(document).ready(function(){
 
   {{if request.function=='index':}}
     <h2>{{=T("Available Databases and Tables")}}</h2>
-
+<div class="my-3">
+  <a class="btn btn-info" href="{{=URL('mfilist')}}">View MFIs</a>
+</div>
     <!-- Quick Create MFI button -->
     <div class="my-3">
       <a class="btn btn-success" 
@@ -149,6 +151,54 @@ jQuery(document).ready(function(){
     <h3>{{=T("Edit current record")}}</h3><br/><br/>
     {{=form}}
 
+    
+{{elif request.function=='mfilist':}}
+<h2>Registered MFIs</h2>
+
+<a class="btn btn-success my-3"
+   href="{{=URL('appadmin', 'insert', args=[list(databases.keys())[0], 'mfi'])}}">
+    + Add New MFI
+</a>
+
+<table class="table table-striped table-bordered sortable">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Country</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{for r in rows:}}
+            <tr>
+                <td>{{=r.id}}</td>
+                <td>{{=r.name}}</td>
+                <td>{{=r.country or ""}}</td>
+                <td>
+                    <a class="btn btn-primary btn-sm"
+                       href="{{=URL('appadmin','mfiedit',args=[r.id])}}">
+                        Edit
+                    </a>
+                </td>
+            </tr>
+        {{pass}}
+    </tbody>
+</table>
+
+    
+    
+    {{elif request.function=='mfiedit':}}
+<h2>Edit MFI</h2>
+
+<a class="btn btn-secondary my-3"
+   href="{{=URL('appadmin','mfilist')}}">
+   ← Back to MFI list
+</a>
+
+{{=form}}
+
+    
   {{pass}} <!-- end of request.function checks -->
 
   </div> <!-- col-md-12 -->

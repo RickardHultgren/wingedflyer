@@ -7,6 +7,7 @@ Implements dual-sided communication:
 
 from gluon.contrib.appconfig import AppConfig
 from gluon.tools import Auth
+import bcrypt
 
 # Load configuration
 configuration = AppConfig(reload=True)
@@ -53,10 +54,18 @@ db.mfi.b2c_accounts.writable = False
 
 
 # Automatically hash MFI passwords set in appadmin
-def hash_mfi_password(form):
-    pwd = form.vars.get('password_hash')
-    if pwd and not pwd.startswith('pbkdf2'):
-        form.vars.password_hash = auth.settings.password_hash(pwd)
+def hash_mfi_password(row):
+    # row is a dict-like object, not a form
+    pwd_plain = row.get('password_hash')
+
+    if not pwd_plain:
+        return row  # nothing to hash
+
+    # Hash it
+    hashed = bcrypt.hashpw(pwd_plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    row['password_hash'] = hashed
+    return row
 
 db.mfi._before_insert.append(hash_mfi_password)
 db.mfi._before_update.append(hash_mfi_password)

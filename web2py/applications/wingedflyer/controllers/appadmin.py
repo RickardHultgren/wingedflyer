@@ -1,279 +1,720 @@
-{{extend 'layout.html'}}
-<script><!--
-    jQuery(document).ready(function(){
-    jQuery("table.sortable tbody tr").mouseover( function() {
-    jQuery(this).addClass("highlight"); }).mouseout( function() {
-    jQuery(this).removeClass("highlight"); });
-    jQuery('table.sortable tbody tr:odd').addClass('odd');
-    jQuery('table.sortable tbody tr:even').addClass('even');
-});
-//--></script>
+# -*- coding: utf-8 -*-
 
-<div class="row">
-  <div class="col-md-12">
+# ##########################################################
+# ## make sure administrator is on localhost
+# ###########################################################
 
-{{if request.function=='index':}}
-<h2>{{=T("Available Databases and Tables")}}</h2>
-  {{if not databases:}}{{=T("No databases in this application")}}{{pass}}
-  <ul class="nav nav-tabs" id="myTab">
-    <li class="nav-item"><a href="#alltables" data-toggle="tab" class="nav-link active">Tables</a></li>
-    <li class="nav-item"><a href="#hooks" data-toggle="tab" class="nav-link">Hooks</a></li>
-  </ul>
-  <div class="tab-content">
-      <div class="tab-pane active" id="alltables">
-        <table class="table table-striped">
-          {{for db in sorted(databases):}}
-            {{for table in databases[db].tables:}}
-              {{qry='%s.%s.id>0'%(db,table)}}
-              {{tbl=databases[db][table]}}
-              {{if hasattr(tbl,'_primarykey'):}}
-                {{if tbl._primarykey:}}
-                    {{firstkey=tbl[tbl._primarykey[0]]}}
-                    {{if firstkey.type in ['string','text']:}}
-                      {{qry='%s.%s.%s!=""'%(db,table,firstkey.name)}}
-                    {{else:}}
-                      {{qry='%s.%s.%s>0'%(db,table,firstkey.name)}}
-                    {{pass}}
-                {{else:}}
-                     {{qry=''}}
-                {{pass}}
-              {{pass}}
-          <tr>
-            <th style="font-size: 1.75em;">
-              &raquo; {{=A("%s.%s" % (db,table),_href=URL('select',args=[db],vars=dict(query=qry)))}}
-            </th>
-            <td>
-              {{=A(str(T('New Record')),_href=URL('insert',args=[db,table]),_class="btn btn-primary")}}
-            </td>
-          </tr>
-          {{pass}}
-          {{pass}}
-        </table>
-      </div>
-      <div class="tab-pane" id="hooks">
-      {{=LOAD('appadmin', 'hooks', ajax=True)}}
-      </div>
-  </div>
-{{elif request.function=='select':}}
-  <h2>{{=XML(str(T("Database %s select"))%A(request.args[0],_href=URL('index'))) }}
-  </h2>
-  {{if tb:}}
-  <h3>{{=T('Traceback')}}</h3>
-  <pre>
-    {{=tb}}
-  </pre>
-  {{pass}}
-  {{if table:}}
-  {{=A(str(T('New Record')),_href=URL('insert',args=[request.args[0],table]),_class="btn btn-primary", _role="button")}}<br/><br/>
-  <hr />
-    <h3>{{=T("Rows in Table")}}</h3><br/>
-   {{else:}}
-    <h3>{{=T("Rows selected")}}</h3><br/>
-   {{pass}}
-   {{=form}}
-   <p class="text-muted">{{=T('The "query" is a condition like "db.table1.field1==\'value\'". Something like "db.table1.field1==db.table2.field2" results in a SQL JOIN.')}}<br/>
-      {{=T('Use (...)&(...) for AND, (...)|(...) for OR, and ~(...)  for NOT to build more complex queries.')}}<br/>
-      {{=T('"update" is an optional expression like "field1=\'newvalue\'". You cannot update or delete the results of a JOIN')}}</p>
-    <br/><br/>
-    <h4>{{=T("%s selected", nrows)}}</h4>
-    {{if start>0:}}{{=A(T('previous %s rows') % step,_href=URL('select',args=request.args[0],vars=dict(start=start-step)),_class="btn btn-primary")}}{{pass}}
-    {{if stop<nrows:}}{{=A(T('next %s rows') % step,_href=URL('select',args=request.args[0],vars=dict(start=start+step)),_class="btn btn-primary")}}{{pass}}
-    {{if rows:}}
-       <div style="overflow:auto; width:80%;">
-       {{linkto = lambda f, t, r: URL('update', args=[request.args[0], r, f]) if f else "#"}}
-       {{upload=URL('download',args=request.args[0])}}
-       {{=SQLTABLE(rows,linkto,upload,orderby=True,query=query,_class='table table-striped table-bordered sortable')}}
-       </div>
-    {{pass}}
-    <br/><br/>
-    <hr />
-    <h3>{{=T("Import/Export")}}</h3><br/>
-    <a href="{{=URL('csv',args=request.args[0],vars=dict(query=query))}}" class="btn btn-primary">{{=T("export as csv file")}}</a>
-  {{=formcsv or ''}}
+import os
+import socket
+import datetime
+import copy
+import gluon.contenttype
+import gluon.fileutils
+from gluon._compat import iteritems
 
-{{elif request.function=='insert':}}
-  <h2>{{=T("Database")}} {{=A(request.args[0],_href=URL('index'))}}
-    {{if hasattr(table,'_primarykey'):}}
-      {{fieldname=table._primarykey[0]}}
-      {{dbname=request.args[0]}}
-      {{tablename=request.args[1]}}
-      {{cond = table[fieldname].type in ['string','text'] and '!=""' or '>0'}}
-      {{=T("Table")}} {{=A(tablename,_href=URL('select',args=dbname,vars=dict(query='%s.%s.%s%s'%(dbname,tablename,fieldname,cond))))}}
-    {{else:}}
-      {{=T("Table")}} {{=A(request.args[1],_href=URL('select',args=request.args[0],vars=dict(query='%s.%s.id>0'%tuple(request.args[:2]))))}}
-    {{pass}}
-  </h2>
-  <h3>{{=T("New Record")}}</h3><br/>
-  {{=form}}
-{{elif request.function=='update':}}
-  <h2>{{=T("Database")}} {{=A(request.args[0],_href=URL('index'))}}
-    {{if hasattr(table,'_primarykey'):}}
-      {{fieldname=request.vars.keys()[0]}}
-      {{dbname=request.args[0]}}
-      {{tablename=request.args[1]}}
-      {{cond = table[fieldname].type in ['string','text'] and '!=""' or '>0'}}
-      {{=T("Table")}} {{=A(tablename,_href=URL('select',args=dbname,vars=dict(query='%s.%s.%s%s'%(dbname,tablename,fieldname,cond))))}}
-      {{=T("Record")}} {{=A('%s=%s'%request.vars.items()[0],_href=URL('update',args=request.args[:2],vars=request.vars))}}
-    {{else:}}
-      {{=T("Table")}} {{=A(request.args[1],_href=URL('select',args=request.args[0],vars=dict(query='%s.%s.id>0'%tuple(request.args[:2]))))}}
-      {{=T("Record id")}} {{=A(request.args[2],_href=URL('update',args=request.args[:3]))}}
-    {{pass}}
-  </h2>
-  <h3>{{=T("Edit current record")}}</h3><br/><br/>{{=form}}
+is_gae = request.env.web2py_runtime_gae or False
 
-{{elif request.function=='state':}}
-  <h2>{{=T("Internal State")}}</h2>
-  <h3>{{=T("Current request")}}</h3>
-  {{=BEAUTIFY(request)}}
-  <br/><h3>{{=T("Current response")}}</h3>
-  {{=BEAUTIFY(response)}}
-  <br/><h3>{{=T("Current session")}}</h3>
-  {{=BEAUTIFY(session)}}
+# ## critical --- make a copy of the environment
+
+global_env = copy.copy(globals())
+global_env['datetime'] = datetime
+
+http_host = request.env.http_host.split(':')[0]
+remote_addr = request.env.remote_addr
+try:
+    hosts = (http_host, socket.gethostname(),
+             socket.gethostbyname(http_host),
+             '::1', '127.0.0.1', '::ffff:127.0.0.1')
+except:
+    hosts = (http_host, )
+
+if request.is_https:
+    session.secure()
+elif request.env.trusted_lan_prefix and \
+     remote_addr.startswith(request.env.trusted_lan_prefix):
+    request.is_local = True
+elif (remote_addr not in hosts) and (remote_addr != '127.0.0.1') and \
+    (request.function != 'manage'):
+    raise HTTP(200, T('appadmin is disabled because insecure channel'))
+
+if request.function == 'manage':
+    # Safely check for auth object
+    auth_present = 'auth' in globals() and hasattr(auth, 'user')
+
+    # If missing, block the `manage` interface but with a clear error
+    if not auth_present:
+        raise HTTP(403, T("appadmin 'manage' requires Auth but 'auth' is not defined in this app."))
+
+    # If Auth exists, proceed normally
+elif (request.application == 'admin' and not session.authorized) or \
+        (request.application != 'admin' and not gluon.fileutils.check_credentials(request)):
+    redirect(URL('admin', 'default', 'index',
+                 vars=dict(send=URL(args=request.args, vars=request.vars))))
+else:
+    response.subtitle = T('Database Administration (appadmin)')
+    menu = True
+
+ignore_rw = True
+response.view = 'appadmin.html'
+if menu:
+    response.menu = [[T('design'), False, URL('admin', 'default', 'design',
+                 args=[request.application])], [T('db'), False,
+                 URL('index')], [T('state'), False,
+                 URL('state')], [T('cache'), False,
+                 URL('ccache')]]
+
+# ##########################################################
+# ## auxiliary functions
+# ###########################################################
+
+if False and request.tickets_db:
+    from gluon.restricted import TicketStorage
+    ts = TicketStorage()
+    ts._get_table(request.tickets_db, ts.tablename, request.application)
+
+def get_databases(request):
+    dbs = {}
+    for (key, value) in global_env.items():
+        try:
+            cond = isinstance(value, GQLDB)
+        except:
+            cond = isinstance(value, SQLDB)
+        if cond:
+            dbs[key] = value
+    return dbs
+
+databases = get_databases(None)
+
+def eval_in_global_env(text):
+    exec ('_ret=%s' % text, {}, global_env)
+    return global_env['_ret']
 
 
-{{elif request.function == 'ccache':}}
-<h2>{{T("Cache")}}</h2>
-<div class="list">
+def get_database(request):
+    if request.args and request.args[0] in databases:
+        return eval_in_global_env(request.args[0])
+    else:
+        session.flash = T('invalid request')
+        redirect(URL('index'))
 
-  <div class="list-header">
-    <h3>{{T("Statistics")}}</h3>
-  </div>
+def get_table(request):
+    db = get_database(request)
+    if len(request.args) > 1 and request.args[1] in db.tables:
+        return (db, request.args[1])
+    else:
+        session.flash = T('invalid request')
+        redirect(URL('index'))
 
-  <div class="content">
-    <h4>{{=T("Overview")}}</h4>
-    <p>{{=T.M("Number of entries: **%s**", total['entries'])}}</p>
-    {{if total['entries'] > 0:}}
-    <p>{{=T.M("Hit Ratio: **%(ratio)s%%** (**%(hits)s** %%{hit(hits)} and **%(misses)s** %%{miss(misses)})",
-             dict( ratio=total['ratio'], hits=total['hits'], misses=total['misses']))}}
-    </p>
-    <p>
-      {{=T("Size of cache:")}}
-      {{if object_stats:}}
-        {{=T.M("**%(items)s** %%{item(items)}, **%(bytes)s** %%{byte(bytes)}", dict(items=total['objects'], bytes=total['bytes']))}}
-        {{if total['bytes'] > 524287:}}
-          {{=T.M("(**%.0d MB**)", total['bytes'] / 1048576)}}
-        {{pass}}
-      {{else:}}
-        {{=T.M("**not available** (requires the Python [[Pympler https://pypi.python.org/pypi/Pympler popup]] library)")}}
-      {{pass}}
-    </p>
-    <p>
-      {{=T.M("Cache contains items up to **%(hours)02d** %%{hour(hours)} **%(min)02d** %%{minute(min)} **%(sec)02d** %%{second(sec)} old.",
-              dict(hours=total['oldest'][0], min=total['oldest'][1], sec=total['oldest'][2]))}}
-    </p>
-    {{=BUTTON(T('Cache Keys'), _onclick='jQuery("#all_keys").toggle().toggleClass( "w2p_hidden" );')}}
-    <div class="w2p_hidden" id="all_keys">
-      {{=total['keys']}}
-    </div>
-    <br />
-    {{pass}}
 
-    <h4>{{=T("RAM")}}</h4>
-    <p>{{=T.M("Number of entries: **%s**", ram['entries'])}}</p>
-    {{if ram['entries'] > 0:}}
-    <p>{{=T.M("Hit Ratio: **%(ratio)s%%** (**%(hits)s** %%{hit(hits)} and **%(misses)s** %%{miss(misses)})",
-             dict( ratio=ram['ratio'], hits=ram['hits'], misses=ram['misses']))}}
-    </p>
-    <p>
-      {{=T("Size of cache:")}}
-      {{if object_stats:}}
-        {{=T.M("**%(items)s** items, **%(bytes)s** %%{byte(bytes)}", dict(items=ram['objects'], bytes=ram['bytes']))}}
-        {{if ram['bytes'] > 524287:}}
-          {{=T.M("(**%.0d MB**)", ram['bytes'] / 10485576)}}
-        {{pass}}
-      {{else:}}
-        {{=T.M("``**not available**``:red (requires the Python [[Pympler https://pypi.python.org/pypi/Pympler popup]] library)")}}
-      {{pass}}
-    </p>
-    <p>
-      {{=T.M("RAM contains items up to **%(hours)02d** %%{hour(hours)} **%(min)02d** %%{minute(min)} **%(sec)02d** %%{second(sec)} old.",
-              dict(hours=ram['oldest'][0], min=ram['oldest'][1], sec=ram['oldest'][2]))}}
-    </p>
-    {{=BUTTON(T('RAM Cache Keys'), _onclick='jQuery("#ram_keys").toggle().toggleClass( "w2p_hidden" );')}}
-    <div class="w2p_hidden" id="ram_keys">
-      {{=ram['keys']}}
-    </div>
-    <br />
-    {{pass}}
+def get_query(request):
+    try:
+        return eval_in_global_env(request.vars.query)
+    except Exception:
+        return None
 
-    <h4>{{=T("DISK")}}</h4>
-    <p>{{=T.M("Number of entries: **%s**", disk['entries'])}}</p>
-    {{if disk['entries'] > 0:}}
-      <p>
-      {{=T.M("Hit Ratio: **%(ratio)s%%** (**%(hits)s** %%{hit(hits)} and **%(misses)s** %%{miss(misses)})",
-            dict(ratio=disk['ratio'], hits=disk['hits'], misses=disk['misses']))}}
-      </p>
-      <p>
-      {{=T("Size of cache:")}}
-      {{if object_stats:}}
-        {{=T.M("**%(items)s** %%{item(items)}, **%(bytes)s** %%{byte(bytes)}", dict( items=disk['objects'], bytes=disk['bytes']))}}
-        {{if disk['bytes'] > 524287:}}
-          {{=T.M("(**%.0d MB**)", disk['bytes'] / 1048576)}}
-        {{pass}}
-      {{else:}}
-        {{=T.M("``**not available**``:red (requires the Python [[Pympler https://pypi.python.org/pypi/Pympler popup]] library)")}}
-      {{pass}}
-      </p>
-      <p>
-      {{=T.M("DISK contains items up to **%(hours)02d** %%{hour(hours)} **%(min)02d** %%{minute(min)} **%(sec)02d** %%{second(sec)} old.",
-                dict(hours=disk['oldest'][0], min=disk['oldest'][1], sec=disk['oldest'][2]))}}
-      </p>
-      {{=BUTTON(T('Disk Cache Keys'), _onclick='jQuery("#disk_keys").toggle().toggleClass( "w2p_hidden" );')}}
-      <div class="w2p_hidden" id="disk_keys">
-      {{=disk['keys']}}
-      </div>
-      <br />
-    {{pass}}
-  </div>
 
-  <div class="list-header">
-    <h3>{{=T("Manage Cache")}}</h3>
-  </div>
+def query_by_table_type(tablename, db, request=request):
+    keyed = hasattr(db[tablename], '_primarykey')
+    if keyed:
+        firstkey = db[tablename][db[tablename]._primarykey[0]]
+        cond = '>0'
+        if firstkey.type in ['string', 'text']:
+            cond = '!=""'
+        qry = '%s.%s.%s%s' % (
+            request.args[0], request.args[1], firstkey.name, cond)
+    else:
+        qry = '%s.%s.id>0' % tuple(request.args[:2])
+    return qry
 
-  <div class="content">
-    <p>
-      {{=form}}
-    </p>
-  </div>
-</div>
-<div class="clear"></div>
-{{pass}}
 
-{{if request.function=='d3_graph_model':}}
-<h2>{{=T("Graph Model")}}</h2>
-  {{if not databases:}}  
-    {{=T("No databases in this application")}}
-  {{else:}}    
-    <div id="vis"></div>
-      <link rel="stylesheet" href="{{=URL('admin','static','css/d3_graph.css')}}"/>
-      <script>
-        // Define the d3 input data
-        {{from gluon.serializers import json }}
-        var nodes = {{=XML(json(nodes))}};
-        var links = {{=XML(json(links))}};
-        d3_graph();
-      </script>
-  {{pass}}
-{{pass}}  
+# ##########################################################
+# ## list all databases and tables
+# ###########################################################
+def index():
+    return dict(databases=databases)
 
-{{if request.function == 'manage':}}
-<h2>{{=heading}}</h2>
-<ul class="nav nav-tabs">
-  {{for k, tablename in enumerate(tablenames):}}
-  <li{{=XML(' class="active"') if k == 0 else ''}}>
-    <a href="#table-{{=tablename}}" data-toggle="tab">{{=labels[k]}}</a>
-  </li>
-  {{pass}}
-</ul>
 
-<div class="tab-content">
-  {{for k, tablename in enumerate(tablenames):}}
-  <div class="tab-pane{{=XML(' active') if k == 0 else ''}}" id="table-{{=tablename}}">
-    {{=LOAD(f='manage.load', args=[request.args(0), k], ajax=True)}}
-  </div>
-  {{pass}}
-</div>
-{{pass}}
+# ##########################################################
+# ## insert a new record
+# ###########################################################
 
-  </div>
-</div>
+
+def insert():
+    (db, table) = get_table(request)
+    form = SQLFORM(db[table], ignore_rw=ignore_rw)
+    if form.accepts(request.vars, session):
+        response.flash = T('new record inserted')
+    return dict(form=form, table=db[table])
+
+
+# ##########################################################
+# ## list all records in table and insert new record
+# ###########################################################
+
+
+def download():
+    import os
+    db = get_database(request)
+    return response.download(request, db)
+
+
+def csv():
+    import gluon.contenttype
+    response.headers['Content-Type'] = \
+        gluon.contenttype.contenttype('.csv')
+    db = get_database(request)
+    query = get_query(request)
+    if not query:
+        return None
+    response.headers['Content-disposition'] = 'attachment; filename=%s_%s.csv'\
+        % tuple(request.vars.query.split('.')[:2])
+    return str(db(query, ignore_common_filters=True).select())
+
+
+def import_csv(table, file):
+    table.import_from_csv_file(file)
+
+
+def select():
+    import re
+    db = get_database(request)
+    dbname = request.args[0]
+    try:
+        is_imap = db._uri.startswith('imap://')
+    except (KeyError, AttributeError, TypeError):
+        is_imap = False
+    regex = re.compile(r'(?P<table>\w+)\.(?P<field>\w+)=(?P<value>\d+)')
+    if len(request.args) > 1 and hasattr(db[request.args[1]], '_primarykey'):
+        regex = re.compile(r'(?P<table>\w+)\.(?P<field>\w+)=(?P<value>.+)')
+    if request.vars.query:
+        match = regex.match(request.vars.query)
+        if match:
+            request.vars.query = '%s.%s.%s==%s' % (request.args[0],
+                                                   match.group('table'), match.group('field'),
+                                                   match.group('value'))
+    query = get_query(request)
+    if request.vars.start:
+        start = int(request.vars.start)
+    else:
+        start = 0
+    nrows = 0
+
+    step = 100
+    fields = []
+
+    if is_imap:
+        step = 3
+
+    stop = start + step
+
+    table = None
+    rows = []
+    orderby = request.vars.orderby
+    if orderby:
+        orderby = dbname + '.' + orderby
+        if orderby == session.last_orderby:
+            if orderby[0] == '~':
+                orderby = orderby[1:]
+            else:
+                orderby = '~' + orderby
+    session.last_orderby = orderby
+    form = FORM(TABLE(TR(T('Query:'), '', INPUT(_style='width:400px',
+                _name='query', _value=request.vars.query or '', _class='form-control',
+                requires=IS_NOT_EMPTY(
+                    error_message=T('Cannot be empty')))), TR(T('Update:'),
+                INPUT(_name='update_check', _type='checkbox',
+                value=False), INPUT(_style='width:400px',
+                _name='update_fields', _value=request.vars.update_fields
+                                    or '', _class='form-control')), TR(T('Delete:'), INPUT(_name='delete_check',
+                _class='delete', _type='checkbox', value=False), ''),
+                TR('', '', INPUT(_type='submit', _value=T('Submit'), _class='btn btn-primary'))),
+                _action=URL(r=request, args=request.args))
+
+    tb = None
+    if form.accepts(request.vars, formname=None):
+        regex = re.compile(request.args[0] + r'\.(?P<table>\w+)\..+')
+        match = regex.match(form.vars.query.strip())
+        if match:
+            table = match.group('table')
+        try:
+            nrows = db(query, ignore_common_filters=True).count()
+            if form.vars.update_check and form.vars.update_fields:
+                db(query, ignore_common_filters=True).update(
+                    **eval_in_global_env('dict(%s)' % form.vars.update_fields))
+                response.flash = T('%s %%{row} updated', nrows)
+            elif form.vars.delete_check:
+                db(query, ignore_common_filters=True).delete()
+                response.flash = T('%s %%{row} deleted', nrows)
+            nrows = db(query, ignore_common_filters=True).count()
+
+            if is_imap:
+                fields = [db[table][name] for name in
+                    ('id', 'uid', 'created', 'to',
+                     'sender', 'subject')]
+            if orderby:
+                rows = db(query, ignore_common_filters=True).select(
+                              *fields, limitby=(start, stop),
+                              orderby=eval_in_global_env(orderby))
+            else:
+                rows = db(query, ignore_common_filters=True).select(
+                    *fields, limitby=(start, stop))
+        except Exception as e:
+            import traceback
+            tb = traceback.format_exc()
+            (rows, nrows) = ([], 0)
+            response.flash = DIV(T('Invalid Query'), PRE(str(e)))
+    # begin handle upload csv
+    csv_table = table or request.vars.table
+    if csv_table:
+        formcsv = FORM(str(T('or import from csv file')) + ' ',
+                       INPUT(_type='file', _name='csvfile'),
+                       INPUT(_type='hidden', _value=csv_table, _name='table'),
+                       INPUT(_type='submit', _value=T('import'), _class='btn btn-primary'))
+    else:
+        formcsv = None
+    if formcsv and formcsv.process().accepted:
+        try:
+            import_csv(db[request.vars.table],
+                       request.vars.csvfile.file)
+            response.flash = T('data uploaded')
+        except Exception as e:
+            response.flash = DIV(T('unable to parse csv file'), PRE(str(e)))
+    # end handle upload csv
+
+    return dict(
+        form=form,
+        table=table,
+        start=start,
+        stop=stop,
+        step=step,
+        nrows=nrows,
+        rows=rows,
+        query=request.vars.query,
+        formcsv=formcsv,
+        tb=tb
+    )
+
+
+# ##########################################################
+# ## edit delete one record
+# ###########################################################
+
+
+def update():
+    (db, table) = get_table(request)
+    keyed = hasattr(db[table], '_primarykey')
+    record = None
+    db[table]._common_filter = None
+    if keyed:
+        key = [f for f in request.vars if f in db[table]._primarykey]
+        if key:
+            record = db(db[table][key[0]] == request.vars[key[
+                        0]]).select().first()
+    else:
+        record = db(db[table].id == request.args(
+            2)).select().first()
+
+    if not record:
+        qry = query_by_table_type(table, db)
+        session.flash = T('record does not exist')
+        redirect(URL('select', args=request.args[:1],
+                     vars=dict(query=qry)))
+
+    if keyed:
+        for k in db[table]._primarykey:
+            db[table][k].writable = False
+
+    form = SQLFORM(
+        db[table], record, deletable=True, delete_label=T('Check to delete'),
+        ignore_rw=ignore_rw and not keyed,
+        linkto=URL('select',
+                   args=request.args[:1]), upload=URL(r=request,
+                                                      f='download', args=request.args[:1]))
+
+    if form.accepts(request.vars, session):
+        session.flash = T('done!')
+        qry = query_by_table_type(table, db)
+        redirect(URL('select', args=request.args[:1],
+                 vars=dict(query=qry)))
+    return dict(form=form, table=db[table])
+
+
+# ##########################################################
+# ## get global variables
+# ###########################################################
+
+
+def state():
+    return dict()
+
+
+def ccache():
+    if is_gae:
+        form = FORM(
+            P(TAG.BUTTON(T('Clear CACHE?'), _type='submit', _name='yes', _value='yes')))
+    else:
+        cache.ram.initialize()
+        cache.disk.initialize()
+
+        form = FORM(
+            P(TAG.BUTTON(
+                T('Clear CACHE?'), _type='submit', _name='yes', _value='yes')),
+            P(TAG.BUTTON(
+                T('Clear RAM'), _type='submit', _name='ram', _value='ram')),
+            P(TAG.BUTTON(
+                T('Clear DISK'), _type='submit', _name='disk', _value='disk')),
+        )
+
+    if form.accepts(request.vars, session):
+        session.flash = ''
+        if is_gae:
+            if request.vars.yes:
+                cache.ram.clear()
+                session.flash += T('Cache Cleared')
+        else:
+            clear_ram = False
+            clear_disk = False
+            if request.vars.yes:
+                clear_ram = clear_disk = True
+            if request.vars.ram:
+                clear_ram = True
+            if request.vars.disk:
+                clear_disk = True
+            if clear_ram:
+                cache.ram.clear()
+                session.flash += T('Ram Cleared')
+            if clear_disk:
+                cache.disk.clear()
+                session.flash += T('Disk Cleared')
+        redirect(URL(r=request))
+
+    try:
+        from pympler.asizeof import asizeof
+    except ImportError:
+        asizeof = False
+
+    import shelve
+    import os
+    import copy
+    import time
+    import math
+    from pydal.contrib import portalocker
+
+    ram = {
+        'entries': 0,
+        'bytes': 0,
+        'objects': 0,
+        'hits': 0,
+        'misses': 0,
+        'ratio': 0,
+        'oldest': time.time(),
+        'keys': []
+    }
+
+    disk = copy.copy(ram)
+    total = copy.copy(ram)
+    disk['keys'] = []
+    total['keys'] = []
+
+    def GetInHMS(seconds):
+        hours = math.floor(seconds / 3600)
+        seconds -= hours * 3600
+        minutes = math.floor(seconds / 60)
+        seconds -= minutes * 60
+        seconds = math.floor(seconds)
+
+        return (hours, minutes, seconds)
+
+    if is_gae:
+        gae_stats = cache.ram.client.get_stats()
+        try:
+            gae_stats['ratio'] = ((gae_stats['hits'] * 100) /
+                (gae_stats['hits'] + gae_stats['misses']))
+        except ZeroDivisionError:
+            gae_stats['ratio'] = T('?')
+        gae_stats['oldest'] = GetInHMS(time.time() - gae_stats['oldest_item_age'])
+        total.update(gae_stats)
+    else:
+        # get ram stats directly from the cache object
+        ram_stats = cache.ram.stats[request.application]
+        ram['hits'] = ram_stats['hit_total'] - ram_stats['misses']
+        ram['misses'] = ram_stats['misses']
+        try:
+            ram['ratio'] = ram['hits'] * 100 / ram_stats['hit_total']
+        except (KeyError, ZeroDivisionError):
+            ram['ratio'] = 0
+
+        for key, value in iteritems(cache.ram.storage):
+            if asizeof:
+                ram['bytes'] += asizeof(value[1])
+                ram['objects'] += 1
+            ram['entries'] += 1
+            if value[0] < ram['oldest']:
+                ram['oldest'] = value[0]
+            ram['keys'].append((key, GetInHMS(time.time() - value[0])))
+
+        for key in cache.disk.storage:
+            value = cache.disk.storage[key]
+            if key == 'web2py_cache_statistics' and isinstance(value[1], dict):
+                disk['hits'] = value[1]['hit_total'] - value[1]['misses']
+                disk['misses'] = value[1]['misses']
+                try:
+                    disk['ratio'] = disk['hits'] * 100 / value[1]['hit_total']
+                except (KeyError, ZeroDivisionError):
+                    disk['ratio'] = 0
+            else:
+                if asizeof:
+                    disk['bytes'] += asizeof(value[1])
+                    disk['objects'] += 1
+                disk['entries'] += 1
+                if value[0] < disk['oldest']:
+                    disk['oldest'] = value[0]
+                disk['keys'].append((key, GetInHMS(time.time() - value[0])))
+
+        ram_keys = list(ram) # ['hits', 'objects', 'ratio', 'entries', 'keys', 'oldest', 'bytes', 'misses']
+        ram_keys.remove('ratio')
+        ram_keys.remove('oldest')
+        for key in ram_keys:
+            total[key] = ram[key] + disk[key]
+
+        try:
+            total['ratio'] = total['hits'] * 100 / (total['hits'] +
+                                                total['misses'])
+        except (KeyError, ZeroDivisionError):
+            total['ratio'] = 0
+
+        if disk['oldest'] < ram['oldest']:
+            total['oldest'] = disk['oldest']
+        else:
+            total['oldest'] = ram['oldest']
+
+        ram['oldest'] = GetInHMS(time.time() - ram['oldest'])
+        disk['oldest'] = GetInHMS(time.time() - disk['oldest'])
+        total['oldest'] = GetInHMS(time.time() - total['oldest'])
+
+    def key_table(keys):
+        return TABLE(
+            TR(TD(B(T('Key'))), TD(B(T('Time in Cache (h:m:s)')))),
+            *[TR(TD(k[0]), TD('%02d:%02d:%02d' % k[1])) for k in keys],
+            **dict(_class='cache-keys',
+                   _style='border-collapse: separate; border-spacing: .5em;'))
+
+    if not is_gae:
+        ram['keys'] = key_table(ram['keys'])
+        disk['keys'] = key_table(disk['keys'])
+        total['keys'] = key_table(total['keys'])
+
+    return dict(form=form, total=total,
+                ram=ram, disk=disk, object_stats=asizeof != False)
+
+
+def table_template(table):
+    from gluon.html import TR, TD, TABLE, TAG
+
+    def FONT(*args, **kwargs):
+        return TAG.font(*args, **kwargs)
+
+    def types(field):
+        f_type = field.type
+        if not isinstance(f_type,str):
+            return ' '
+        elif f_type == 'string':
+            return field.length
+        elif f_type == 'id':
+            return B('pk')
+        elif f_type.startswith('reference') or \
+                f_type.startswith('list:reference'):
+            return B('fk')
+        else:
+            return ' '
+
+    # This is horribe HTML but the only one graphiz understands
+    rows = []
+    cellpadding = 4
+    color = '#000000'
+    bgcolor = '#FFFFFF'
+    face = 'Helvetica'
+    face_bold = 'Helvetica Bold'
+    border = 0
+
+    rows.append(TR(TD(FONT(table, _face=face_bold, _color=bgcolor),
+                           _colspan=3, _cellpadding=cellpadding,
+                           _align='center', _bgcolor=color)))
+    for row in db[table]:
+        rows.append(TR(TD(FONT(row.name, _color=color, _face=face_bold),
+                              _align='left', _cellpadding=cellpadding,
+                              _border=border),
+                       TD(FONT(row.type, _color=color, _face=face),
+                               _align='left', _cellpadding=cellpadding,
+                               _border=border),
+                       TD(FONT(types(row), _color=color, _face=face),
+                               _align='center', _cellpadding=cellpadding,
+                               _border=border)))
+    return '< %s >' % TABLE(*rows, **dict(_bgcolor=bgcolor, _border=1,
+                                          _cellborder=0, _cellspacing=0)
+                             ).xml()
+
+def manage():
+    tables = manager_action['tables']
+    if isinstance(tables[0], str):
+        db = manager_action.get('db', auth.db)
+        db = globals()[db] if isinstance(db, str) else db
+        tables = [db[table] for table in tables]
+    if request.args(0) == 'auth':
+        auth.table_user()._plural = T('Users')
+        auth.table_group()._plural = T('Roles')
+        auth.table_membership()._plural = T('Memberships')
+        auth.table_permission()._plural = T('Permissions')
+    if request.extension != 'load':
+        return dict(heading=manager_action.get('heading',
+                    T('Manage %(action)s') % dict(action=request.args(0).replace('_', ' ').title())),
+                    tablenames=[table._tablename for table in tables],
+                    labels=[table._plural.title() for table in tables])
+
+    table = tables[request.args(1, cast=int)]
+    formname = '%s_grid' % table._tablename
+    linked_tables = orderby = None
+    if request.args(0) == 'auth':
+        auth.table_group()._id.readable = \
+        auth.table_membership()._id.readable = \
+        auth.table_permission()._id.readable = False
+        auth.table_membership().user_id.label = T('User')
+        auth.table_membership().group_id.label = T('Role')
+        auth.table_permission().group_id.label = T('Role')
+        auth.table_permission().name.label = T('Permission')
+        if table == auth.table_user():
+            linked_tables = [auth.settings.table_membership_name]
+        elif table == auth.table_group():
+            orderby = 'role' if not request.args(3) or '.group_id' not in request.args(3) else None
+        elif table == auth.table_permission():
+            orderby = 'group_id'
+    kwargs = dict(user_signature=True, maxtextlength=1000,
+                  orderby=orderby, linked_tables=linked_tables)
+    smartgrid_args = manager_action.get('smartgrid_args', {})
+    kwargs.update(**smartgrid_args.get('DEFAULT', {}))
+    kwargs.update(**smartgrid_args.get(table._tablename, {}))
+    grid = SQLFORM.smartgrid(table, args=request.args[:2], formname=formname, **kwargs)
+    return grid
+
+def hooks():
+    import functools
+    import inspect
+    list_op = ['_%s_%s' %(h,m) for h in ['before', 'after'] for m in ['insert','update','delete']]
+    tables = []
+    with_build_it = False
+    for db_str in sorted(databases):
+        db = databases[db_str]
+        for t in db.tables:
+            method_hooks = []
+            for op in list_op:
+                functions = []
+                for f in getattr(db[t], op):
+                    if hasattr(f, '__call__'):
+                        try:
+                            if isinstance(f, (functools.partial)):
+                                f = f.func
+                            filename = inspect.getsourcefile(f)
+                            details = {'funcname':f.__name__,
+                                       'filename':filename[len(request.folder):] if request.folder in filename else None,
+                                       'lineno': inspect.getsourcelines(f)[1]}
+                            if details['filename']: # Built in functions as delete_uploaded_files are not editable
+                                details['url'] = URL(a='admin',c='default',f='edit', args=[request['application'], details['filename']],vars={'lineno':details['lineno']})
+                            if details['filename'] or with_build_it:
+                                functions.append(details)
+                        # compiled app and windows build don't support code inspection
+                        except:
+                            pass
+                if len(functions):
+                    method_hooks.append({'name': op, 'functions':functions})
+            if len(method_hooks):
+                tables.append({'name': '%s.%s' % (db_str, t), 'slug': IS_SLUG()('%s.%s' % (db_str,t))[0], 'method_hooks':method_hooks})
+    # Render
+    ul_main = UL(_class='nav nav-list')
+    for t in tables:
+        ul_main.append(A(t['name'], _onclick="collapse('a_%s')" % t['slug']))
+        ul_t = UL(_class='nav nav-list', _id='a_%s' % t['slug'], _style='display:none')
+        for op in t['method_hooks']:
+            ul_t.append(LI(op['name']))
+            ul_t.append(UL([LI(A(f['funcname'], _class='editor_filelink', _href=f['url']if 'url' in f else None, **{'_data-lineno':f['lineno']-1})) for f in op['functions']]))
+        ul_main.append(ul_t)
+    return ul_main
+
+
+# ##########################################################
+# d3 based model visualizations
+# ###########################################################
+
+def d3_graph_model():
+    ''' See https://www.facebook.com/web2py/posts/145613995589010 from Bruno Rocha
+    and also the app_admin bg_graph_model function
+
+    Create a list of table dicts, called 'nodes'
+    '''
+
+    nodes = []
+    links = []
+
+    for database in databases:
+        db = eval_in_global_env(database)
+        for tablename in db.tables:
+            fields = []
+            for field in db[tablename]:
+                f_type = field.type
+                if not isinstance(f_type, str):
+                    disp = ' '
+                elif f_type == 'string':
+                    disp = field.length
+                elif f_type == 'id':
+                    disp = 'PK'
+                elif f_type.startswith('reference') or \
+                    f_type.startswith('list:reference'):
+                    disp = 'FK'
+                else:
+                    disp = ' '
+                fields.append(dict(name=field.name, type=field.type, disp=disp))
+
+                if isinstance(f_type, str) and (
+                    f_type.startswith('reference') or
+                    f_type.startswith('list:reference')):
+                    referenced_table = f_type.split()[1].split('.')[0]
+
+                    links.append(dict(source=tablename, target = referenced_table))
+
+            nodes.append(dict(name=tablename, type='table', fields = fields))
+
+    # d3 v4 allows individual modules to be specified.  The complete d3 library is included below.
+    response.files.append(URL('admin','static','js/d3.min.js'))
+    response.files.append(URL('admin','static','js/d3_graph.js'))
+    return dict(databases=databases, nodes=nodes, links=links)
+
+
+# ##########################################################
+# ### Custom MFI list & edit
+# ##########################################################
+
+def mfilist():
+    db = get_database(request)
+    if "mfi" not in db.tables:
+        return dict(error="MFI table not found", rows=[])
+
+    rows = db(db.mfi.id > 0).select()
+    return dict(rows=rows)
+
+
+def mfiedit():
+    db = get_database(request)
+    mfi_id = request.args(0)
+    if not mfi_id:
+        session.flash = "Missing ID"
+        redirect(URL("mfilist"))
+
+    record = db.mfi(mfi_id)
+    if not record:
+        session.flash = "MFI not found"
+        redirect(URL("mfilist"))
+
+    form = SQLFORM(db.mfi, record, showid=False)
+    if form.accepts(request.vars, session):
+        response.flash = "MFI updated"
+
+    return dict(form=form, record=record)
