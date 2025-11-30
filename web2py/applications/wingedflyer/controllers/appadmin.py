@@ -189,25 +189,12 @@ def mfiedit():
 
 
 def mficreate():
-    """Create a new MFI"""
-    if not databases:
-        session.flash = T('No database configured')
-        redirect(URL('index'))
-    
-    db_name = sorted(databases.keys())[0]
-    db = databases[db_name]
-    
-    if "mfi" not in db.tables:
-        session.flash = T('MFI table not found')
-        redirect(URL('index'))
-    
-    form = SQLFORM(db.mfi, ignore_rw=ignore_rw)
-    
-    if form.accepts(request.vars, session):
-        session.flash = T('New MFI created successfully')
+    form = SQLFORM(db.mfi)
+    if form.process().accepted:
         redirect(URL('mfilist'))
-    
-    return dict(form=form)
+    elif form.errors:
+        response.flash = "There were errors submitting the form"
+    return locals()
 
 
 # ##########################################################
