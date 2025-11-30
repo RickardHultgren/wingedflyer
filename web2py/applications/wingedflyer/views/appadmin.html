@@ -16,190 +16,434 @@ jQuery(document).ready(function(){
   <div class="col-md-12">
 
   {{if request.function=='index':}}
-    <h2>{{=T("Available Databases and Tables")}}</h2>
-<div class="my-3">
-  <a class="btn btn-info" href="{{=URL('mfilist')}}">View MFIs</a>
-</div>
-    <!-- Quick Create MFI button -->
+    <!-- ============================================ -->
+    <!-- MAIN DATABASE OVERVIEW -->
+    <!-- ============================================ -->
+    <h2>{{=T("Database Administration")}}</h2>
+    
+    <div class="alert alert-info">
+      <strong>{{=T("MFI Management:")}}</strong> 
+      {{=T("Use the buttons below to manage Microfinance Institutions")}}
+    </div>
+
     <div class="my-3">
-      <a class="btn btn-success" 
-         href="{{=URL('appadmin', 'insert', args=[list(databases.keys())[0], 'mfi'])}}">
-        + Add New MFI
+      <a class="btn btn-success btn-lg" href="{{=URL('mfilist')}}">
+        <i class="glyphicon glyphicon-list"></i> {{=T("View All MFIs")}}
+      </a>
+      <a class="btn btn-primary btn-lg" href="{{=URL('mficreate')}}">
+        <i class="glyphicon glyphicon-plus"></i> {{=T("Add New MFI")}}
       </a>
     </div>
 
+    <hr/>
+
+    <h3>{{=T("Available Databases and Tables")}}</h3>
+
     {{if not databases:}}
-      {{=T("No databases in this application")}}
+      <div class="alert alert-warning">
+        {{=T("No databases in this application")}}
+      </div>
+    {{else:}}
+      <ul class="nav nav-tabs" id="myTab">
+        <li class="nav-item">
+          <a href="#alltables" data-toggle="tab" class="nav-link active">
+            {{=T("Tables")}}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#hooks" data-toggle="tab" class="nav-link">
+            {{=T("Hooks")}}
+          </a>
+        </li>
+      </ul>
+
+      <div class="tab-content" style="padding-top: 20px;">
+        <div class="tab-pane active" id="alltables">
+          <table class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th>{{=T("Database.Table")}}</th>
+                <th style="width: 150px;">{{=T("Actions")}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{for db in sorted(databases):}}
+                {{for table in databases[db].tables:}}
+                  {{qry='%s.%s.id>0'%(db,table)}}
+                  {{tbl=databases[db][table]}}
+                  {{if hasattr(tbl,'_primarykey') and tbl._primarykey:}}
+                    {{firstkey=tbl[tbl._primarykey[0]]}}
+                    {{if firstkey.type in ['string','text']:}}
+                      {{qry='%s.%s.%s!=""'%(db,table,firstkey.name)}}
+                    {{else:}}
+                      {{qry='%s.%s.%s>0'%(db,table,firstkey.name)}}
+                    {{pass}}
+                  {{pass}}
+                  <tr>
+                    <td style="font-size: 1.1em;">
+                      {{=A("%s.%s" % (db,table), _href=URL('select', args=[db], vars=dict(query=qry)))}}
+                    </td>
+                    <td>
+                      {{=A(T('New Record'), _href=URL('insert', args=[db, table]), _class="btn btn-sm btn-primary")}}
+                    </td>
+                  </tr>
+                {{pass}}
+              {{pass}}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tab-pane" id="hooks">
+          {{=LOAD('appadmin', 'hooks', ajax=True)}}
+        </div>
+      </div>
     {{pass}}
 
-    <ul class="nav nav-tabs" id="myTab">
-      <li class="nav-item"><a href="#alltables" data-toggle="tab" class="nav-link active">Tables</a></li>
-      <li class="nav-item"><a href="#hooks" data-toggle="tab" class="nav-link">Hooks</a></li>
-    </ul>
+  {{elif request.function=='mfilist':}}
+    <!-- ============================================ -->
+    <!-- MFI LIST VIEW -->
+    <!-- ============================================ -->
+    <h2>{{=T("Registered Microfinance Institutions")}}</h2>
 
-    <div class="tab-content">
-      <div class="tab-pane active" id="alltables">
-        <table class="table table-striped">
-          {{for db in sorted(databases):}}
-            {{for table in databases[db].tables:}}
-              {{qry='%s.%s.id>0'%(db,table)}}
-              {{tbl=databases[db][table]}}
-              {{if hasattr(tbl,'_primarykey') and tbl._primarykey:}}
-                {{firstkey=tbl[tbl._primarykey[0]]}}
-                {{if firstkey.type in ['string','text']:}}
-                  {{qry='%s.%s.%s!=""'%(db,table,firstkey.name)}}
-                {{else:}}
-                  {{qry='%s.%s.%s>0'%(db,table,firstkey.name)}}
-                {{pass}}
-              {{else:}}
-                {{qry=''}}
-              {{pass}}
+    {{if 'error' in globals() and error:}}
+      <div class="alert alert-danger">
+        <strong>{{=T("Error:")}}</strong> {{=error}}
+      </div>
+    {{elif rows:}}
+      <div class="alert alert-success">
+        <strong>{{=T("Total MFIs:")}}</strong> {{=len(rows)}}
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-striped table-bordered table-hover">
+          <thead class="thead-dark">
+            <tr>
+              <th>{{=T("ID")}}</th>
+              <th>{{=T("Username")}}</th>
+              <th>{{=T("MFI Name")}}</th>
+              <th>{{=T("Country")}}</th>
+              <th>{{=T("Email")}}</th>
+              <th>{{=T("Contact Person")}}</th>
+              <th>{{=T("B2C Accounts")}}</th>
+              <th>{{=T("Created On")}}</th>
+              <th style="width: 120px;">{{=T("Actions")}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{for row in rows:}}
               <tr>
-                <th style="font-size: 1.75em;">
-                  &raquo; {{=A("%s.%s" % (db,table), _href=URL('select', args=[db], vars=dict(query=qry)))}}
-                </th>
+                <td><strong>{{=row.id}}</strong></td>
+                <td><code>{{=row.username}}</code></td>
+                <td>{{=row.name}}</td>
+                <td>{{=row.country or T('N/A')}}</td>
+                <td>{{=row.email or T('N/A')}}</td>
+                <td>{{=row.contact_person or T('N/A')}}</td>
                 <td>
-                  {{=A(str(T('New Record')), _href=URL('insert', args=[db, table]), _class="btn btn-primary")}}
+                  <span class="badge badge-info">{{=row.b2c_accounts}}</span>
+                </td>
+                <td>{{=row.created_on.strftime('%Y-%m-%d %H:%M') if row.created_on else T('N/A')}}</td>
+                <td>
+                  <a class="btn btn-sm btn-primary" href="{{=URL('mfiedit', args=[row.id])}}" title="{{=T('Edit MFI')}}">
+                    <i class="glyphicon glyphicon-edit"></i> {{=T("Edit")}}
+                  </a>
                 </td>
               </tr>
             {{pass}}
-          {{pass}}
+          </tbody>
         </table>
       </div>
+    {{else:}}
+      <div class="alert alert-info">
+        <strong>{{=T("No MFIs found.")}}</strong> {{=T("Click the button below to create your first MFI.")}}
+      </div>
+    {{pass}}
 
-      <div class="tab-pane" id="hooks">
-        {{=LOAD('appadmin', 'hooks', ajax=True)}}
+    <div class="my-3">
+      <a class="btn btn-success btn-lg" href="{{=URL('mficreate')}}">
+        <i class="glyphicon glyphicon-plus"></i> {{=T("Add New MFI")}}
+      </a>
+      <a class="btn btn-secondary" href="{{=URL('index')}}">
+        <i class="glyphicon glyphicon-arrow-left"></i> {{=T("Back to Database Admin")}}
+      </a>
+    </div>
+
+  {{elif request.function=='mfiedit':}}
+    <!-- ============================================ -->
+    <!-- MFI EDIT VIEW -->
+    <!-- ============================================ -->
+    <h2>{{=T("Edit Microfinance Institution")}}</h2>
+    
+    {{if record:}}
+      <div class="alert alert-info">
+        <h4>{{=T("MFI Information")}}</h4>
+        <ul style="margin-bottom: 0;">
+          <li><strong>{{=T("ID:")}} </strong>{{=record.id}}</li>
+          <li><strong>{{=T("Username:")}} </strong><code>{{=record.username}}</code></li>
+          <li><strong>{{=T("Name:")}} </strong>{{=record.name}}</li>
+          <li><strong>{{=T("B2C Accounts:")}} </strong>
+            <span class="badge badge-primary">{{=b2c_count}}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">{{=T("Edit MFI Details")}}</h3>
+        </div>
+        <div class="panel-body">
+          <div class="alert alert-warning">
+            <strong>{{=T("Note:")}}</strong> 
+            {{=T("If you enter a new password, it will be automatically encrypted. Leave the password field blank to keep the current password.")}}
+          </div>
+          
+          {{=form}}
+        </div>
+      </div>
+    {{else:}}
+      <div class="alert alert-danger">
+        <strong>{{=T("Error:")}}</strong> {{=T("MFI record not found.")}}
+      </div>
+    {{pass}}
+
+    <div class="my-3">
+      <a class="btn btn-secondary" href="{{=URL('mfilist')}}">
+        <i class="glyphicon glyphicon-arrow-left"></i> {{=T("Back to MFI List")}}
+      </a>
+    </div>
+
+  {{elif request.function=='mficreate':}}
+    <!-- ============================================ -->
+    <!-- MFI CREATE VIEW -->
+    <!-- ============================================ -->
+    <h2>{{=T("Create New Microfinance Institution")}}</h2>
+    
+    <div class="panel panel-primary">
+      <div class="panel-heading">
+        <h3 class="panel-title">{{=T("New MFI Registration")}}</h3>
+      </div>
+      <div class="panel-body">
+        <div class="alert alert-info">
+          <h4>{{=T("Instructions:")}}</h4>
+          <ul>
+            <li>{{=T("All fields marked with * are required")}}</li>
+            <li>{{=T("The username must be unique")}}</li>
+            <li>{{=T("The password will be automatically encrypted when saved")}}</li>
+            <li>{{=T("The B2C Accounts counter will automatically update when borrowers are added")}}</li>
+          </ul>
+        </div>
+
+        {{=form}}
       </div>
     </div>
 
+    <div class="my-3">
+      <a class="btn btn-secondary" href="{{=URL('mfilist')}}">
+        <i class="glyphicon glyphicon-arrow-left"></i> {{=T("Back to MFI List")}}
+      </a>
+    </div>
+
   {{elif request.function=='select':}}
+    <!-- ============================================ -->
+    <!-- SELECT/QUERY VIEW -->
+    <!-- ============================================ -->
     <h2>{{=XML(str(T("Database %s select")) % A(request.args[0], _href=URL('index'))) }}</h2>
 
     {{if tb:}}
-      <h3>{{=T('Traceback')}}</h3>
-      <pre>{{=tb}}</pre>
-    {{pass}}
-
-    {{if table:}}
-      {{=A(str(T('New Record')), _href=URL('insert', args=[request.args[0], table]), _class="btn btn-primary", _role="button")}}<br/><br/>
-      <hr />
-      <h3>{{=T("Rows in Table")}}</h3><br/>
-    {{else:}}
-      <h3>{{=T("Rows selected")}}</h3><br/>
-    {{pass}}
-
-    {{=form}}
-    <p class="text-muted">
-      {{=T('The "query" is a condition like "db.table1.field1==\'value\'". Something like "db.table1.field1==db.table2.field2" results in a SQL JOIN.')}}
-      <br/>
-      {{=T('Use (...)&(...) for AND, (...)|(...) for OR, and ~(...)  for NOT to build more complex queries.')}}
-      <br/>
-      {{=T('"update" is an optional expression like "field1=\'newvalue\'". You cannot update or delete the results of a JOIN')}}
-    </p>
-
-    <br/><br/>
-    <h4>{{=T("%s selected", nrows)}}</h4>
-    {{if start>0:}}
-      {{=A(T('previous %s rows') % step, _href=URL('select', args=request.args[0], vars=dict(start=start-step)), _class="btn btn-primary")}}
-    {{pass}}
-    {{if stop<nrows:}}
-      {{=A(T('next %s rows') % step, _href=URL('select', args=request.args[0], vars=dict(start=start+step)), _class="btn btn-primary")}}
-    {{pass}}
-
-    {{if rows:}}
-      <div style="overflow:auto; width:80%;">
-        {{linkto = lambda f, t, r: URL('update', args=[request.args[0], r, f]) if f else "#"}}
-        {{upload=URL('download', args=request.args[0])}}
-        {{=SQLTABLE(rows, linkto, upload, orderby=True, query=query, _class='table table-striped table-bordered sortable')}}
+      <div class="alert alert-danger">
+        <h3>{{=T('Traceback')}}</h3>
+        <pre>{{=tb}}</pre>
       </div>
     {{pass}}
 
-    <br/><br/><hr />
-    <h3>{{=T("Import/Export")}}</h3><br/>
-    <a href="{{=URL('csv', args=request.args[0], vars=dict(query=query))}}" class="btn btn-primary">{{=T("export as csv file")}}</a>
-    {{=formcsv or ''}}
+    {{if table:}}
+      <div class="my-3">
+        {{=A(str(T('New Record')), _href=URL('insert', args=[request.args[0], table]), _class="btn btn-primary btn-lg", _role="button")}}
+      </div>
+      <hr />
+      <h3>{{=T("Rows in Table")}}</h3>
+    {{else:}}
+      <h3>{{=T("Rows selected")}}</h3>
+    {{pass}}
+
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4 class="panel-title">{{=T("Query Interface")}}</h4>
+      </div>
+      <div class="panel-body">
+        {{=form}}
+        
+        <div class="alert alert-info" style="margin-top: 15px;">
+          <h5>{{=T("Query Help:")}}</h5>
+          <ul style="margin-bottom: 0;">
+            <li>{{=T('The "query" is a condition like "db.table1.field1==\'value\'"')}}</li>
+            <li>{{=T('Use (...)&(...) for AND, (...)|(...) for OR, and ~(...) for NOT')}}</li>
+            <li>{{=T('"update" is an optional expression like "field1=\'newvalue\'"')}}</li>
+            <li>{{=T('You cannot update or delete the results of a JOIN')}}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h4>
+      {{=T("%s selected", nrows)}}
+      {{if nrows > 0:}}
+        <span class="badge badge-success">{{=nrows}}</span>
+      {{pass}}
+    </h4>
+
+    <div class="my-3">
+      {{if start>0:}}
+        {{=A(T('← Previous %s rows') % step, _href=URL('select', args=request.args[0], vars=dict(query=request.vars.query, start=start-step)), _class="btn btn-primary")}}
+      {{pass}}
+      {{if stop<nrows:}}
+        {{=A(T('Next %s rows →') % step, _href=URL('select', args=request.args[0], vars=dict(query=request.vars.query, start=start+step)), _class="btn btn-primary")}}
+      {{pass}}
+    </div>
+
+    {{if rows:}}
+      <div style="overflow:auto; width:100%;">
+        {{linkto = lambda f, t, r: URL('update', args=[request.args[0], t, r]) if f else "#"}}
+        {{upload=URL('download', args=request.args[0])}}
+        {{=SQLTABLE(rows, linkto, upload, orderby=True, _class='table table-striped table-bordered sortable')}}
+      </div>
+    {{pass}}
+
+    <hr />
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4 class="panel-title">{{=T("Import/Export")}}</h4>
+      </div>
+      <div class="panel-body">
+        <a href="{{=URL('csv', args=request.args[0], vars=dict(query=query))}}" class="btn btn-success">
+          <i class="glyphicon glyphicon-download"></i> {{=T("Export as CSV file")}}
+        </a>
+        
+        {{if formcsv:}}
+          <hr/>
+          <h5>{{=T("Import from CSV")}}</h5>
+          {{=formcsv}}
+        {{pass}}
+      </div>
+    </div>
 
   {{elif request.function=='insert':}}
-    <h2>{{=T("Database")}} {{=A(request.args[0], _href=URL('index'))}}
+    <!-- ============================================ -->
+    <!-- INSERT VIEW -->
+    <!-- ============================================ -->
+    <h2>
+      {{=T("Database")}} {{=A(request.args[0], _href=URL('index'))}}
       {{if hasattr(table,'_primarykey'):}}
         {{fieldname=table._primarykey[0]}}
         {{dbname=request.args[0]}}
         {{tablename=request.args[1]}}
         {{cond = table[fieldname].type in ['string','text'] and '!=""' or '>0'}}
-        {{=T("Table")}} {{=A(tablename, _href=URL('select', args=dbname, vars=dict(query='%s.%s.%s%s'%(dbname, tablename, fieldname, cond))))}}
+        / {{=T("Table")}} {{=A(tablename, _href=URL('select', args=dbname, vars=dict(query='%s.%s.%s%s'%(dbname, tablename, fieldname, cond))))}}
       {{else:}}
-        {{=T("Table")}} {{=A(request.args[1], _href=URL('select', args=request.args[0], vars=dict(query='%s.%s.id>0'%tuple(request.args[:2]))))}}
+        / {{=T("Table")}} {{=A(request.args[1], _href=URL('select', args=request.args[0], vars=dict(query='%s.%s.id>0'%tuple(request.args[:2]))))}}
       {{pass}}
     </h2>
-    <h3>{{=T("New Record")}}</h3><br/>
-    {{=form}}
+
+    <div class="panel panel-primary">
+      <div class="panel-heading">
+        <h3 class="panel-title">{{=T("Create New Record")}}</h3>
+      </div>
+      <div class="panel-body">
+        {{=form}}
+      </div>
+    </div>
 
   {{elif request.function=='update':}}
-    <h2>{{=T("Database")}} {{=A(request.args[0], _href=URL('index'))}}
+    <!-- ============================================ -->
+    <!-- UPDATE VIEW -->
+    <!-- ============================================ -->
+    <h2>
+      {{=T("Database")}} {{=A(request.args[0], _href=URL('index'))}}
       {{if hasattr(table,'_primarykey'):}}
-        {{fieldname=list(request.vars.keys())[0]}}
+        {{fieldname=list(request.vars.keys())[0] if request.vars else 'id'}}
         {{dbname=request.args[0]}}
         {{tablename=request.args[1]}}
         {{cond = table[fieldname].type in ['string','text'] and '!=""' or '>0'}}
-        {{=T("Table")}} {{=A(tablename, _href=URL('select', args=dbname, vars=dict(query='%s.%s.%s%s'%(dbname, tablename, fieldname, cond))))}}
-        {{=T("Record")}} {{=A('%s=%s'%request.vars.items()[0], _href=URL('update', args=request.args[:2], vars=request.vars))}}
+        / {{=T("Table")}} {{=A(tablename, _href=URL('select', args=dbname, vars=dict(query='%s.%s.%s%s'%(dbname, tablename, fieldname, cond))))}}
+        {{if request.vars:}}
+          / {{=T("Record")}} {{=A('%s=%s'%list(request.vars.items())[0], _href=URL('update', args=request.args[:2], vars=request.vars))}}
+        {{pass}}
       {{else:}}
-        {{=T("Table")}} {{=A(request.args[1], _href=URL('select', args=request.args[0], vars=dict(query='%s.%s.id>0'%tuple(request.args[:2]))))}}
-        {{=T("Record id")}} {{=A(request.args[2], _href=URL('update', args=request.args[:3]))}}
+        / {{=T("Table")}} {{=A(request.args[1], _href=URL('select', args=request.args[0], vars=dict(query='%s.%s.id>0'%tuple(request.args[:2]))))}}
+        / {{=T("Record id")}} {{=A(request.args[2], _href=URL('update', args=request.args[:3]))}}
       {{pass}}
     </h2>
-    <h3>{{=T("Edit current record")}}</h3><br/><br/>
-    {{=form}}
 
-    
-{{elif request.function=='mfilist':}}
-<h2>Registered MFIs</h2>
+    <div class="panel panel-warning">
+      <div class="panel-heading">
+        <h3 class="panel-title">{{=T("Edit Record")}}</h3>
+      </div>
+      <div class="panel-body">
+        <div class="alert alert-warning">
+          <strong>{{=T("Warning:")}}</strong> 
+          {{=T("Check the 'Check to delete' box at the bottom to permanently delete this record.")}}
+        </div>
+        
+        {{=form}}
+      </div>
+    </div>
 
-<a class="btn btn-success my-3"
-   href="{{=URL('appadmin', 'insert', args=[list(databases.keys())[0], 'mfi'])}}">
-    + Add New MFI
-</a>
-
-<table class="table table-striped table-bordered sortable">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Country</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {{for r in rows:}}
-            <tr>
-                <td>{{=r.id}}</td>
-                <td>{{=r.name}}</td>
-                <td>{{=r.country or ""}}</td>
-                <td>
-                    <a class="btn btn-primary btn-sm"
-                       href="{{=URL('appadmin','mfiedit',args=[r.id])}}">
-                        Edit
-                    </a>
-                </td>
-            </tr>
-        {{pass}}
-    </tbody>
-</table>
-
-    
-    
-    {{elif request.function=='mfiedit':}}
-<h2>Edit MFI</h2>
-
-<a class="btn btn-secondary my-3"
-   href="{{=URL('appadmin','mfilist')}}">
-   ← Back to MFI list
-</a>
-
-{{=form}}
-
-    
   {{pass}} <!-- end of request.function checks -->
 
   </div> <!-- col-md-12 -->
 </div> <!-- row -->
+
+<style>
+/* Custom styling for better UI */
+.my-3 {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.badge {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.panel {
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.panel-heading {
+  padding: 10px 15px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  border-radius: 4px 4px 0 0;
+}
+
+.panel-primary .panel-heading {
+  background-color: #337ab7;
+  color: white;
+  border-color: #337ab7;
+}
+
+.panel-warning .panel-heading {
+  background-color: #f0ad4e;
+  color: white;
+  border-color: #f0ad4e;
+}
+
+.panel-body {
+  padding: 15px;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+thead.thead-dark th {
+  background-color: #333;
+  color: white;
+}
+
+.btn-lg {
+  padding: 10px 16px;
+  font-size: 18px;
+}
+</style>

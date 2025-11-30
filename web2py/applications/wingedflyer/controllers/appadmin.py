@@ -38,14 +38,9 @@ elif (remote_addr not in hosts) and (remote_addr != '127.0.0.1') and \
     raise HTTP(200, T('appadmin is disabled because insecure channel'))
 
 if request.function == 'manage':
-    # Safely check for auth object
     auth_present = 'auth' in globals() and hasattr(auth, 'user')
-
-    # If missing, block the `manage` interface but with a clear error
     if not auth_present:
         raise HTTP(403, T("appadmin 'manage' requires Auth but 'auth' is not defined in this app."))
-
-    # If Auth exists, proceed normally
 elif (request.application == 'admin' and not session.authorized) or \
         (request.application != 'admin' and not gluon.fileutils.check_credentials(request)):
     redirect(URL('admin', 'default', 'index',
@@ -84,6 +79,7 @@ def get_databases(request):
     return dbs
 
 databases = get_databases(None)
+
 
 def eval_in_global_env(text):
     exec ('_ret=%s' % text, {}, global_env)
@@ -135,9 +131,88 @@ def index():
 
 
 # ##########################################################
-# ## insert a new record
+# ## MFI Management Functions
 # ###########################################################
 
+def mfilist():
+    """List all MFIs"""
+    if not databases:
+        return dict(error="No database configured.", rows=[])
+    
+    db_name = sorted(databases.keys())[0]
+    db = databases[db_name]
+    
+    if "mfi" not in db.tables:
+        return dict(error="MFI table not found", rows=[])
+    
+    rows = db(db.mfi).select(orderby=db.mfi.name)
+    return dict(rows=rows, db_name=db_name)
+
+
+def mfiedit():
+    """Edit an MFI record"""
+    if not request.args(0):
+        session.flash = T('Invalid MFI ID')
+        redirect(URL('mfilist'))
+    
+    mfi_id = request.args(0, cast=int)
+    if not databases:
+        session.flash = T('No database configured')
+        redirect(URL('index'))
+    
+    db_name = sorted(databases.keys())[0]
+    db = databases[db_name]
+    
+    if "mfi" not in db.tables:
+        session.flash = T('MFI table not found')
+        redirect(URL('index'))
+    
+    record = db.mfi(mfi_id)
+    if not record:
+        session.flash = T('MFI not found')
+        redirect(URL('mfilist'))
+    
+    # Create form for editing
+    form = SQLFORM(db.mfi, record, deletable=True, 
+                   delete_label=T('Check to delete'),
+                   ignore_rw=ignore_rw,
+                   showid=True)
+    
+    if form.accepts(request.vars, session):
+        session.flash = T('MFI updated successfully')
+        redirect(URL('mfilist'))
+    
+    # Get borrower count for this MFI
+    b2c_count = db(db.b2c.mfi_id == mfi_id).count() if 'b2c' in db.tables else 0
+    
+    return dict(form=form, record=record, b2c_count=b2c_count)
+
+
+def mficreate():
+    """Create a new MFI"""
+    if not databases:
+        session.flash = T('No database configured')
+        redirect(URL('index'))
+    
+    db_name = sorted(databases.keys())[0]
+    db = databases[db_name]
+    
+    if "mfi" not in db.tables:
+        session.flash = T('MFI table not found')
+        redirect(URL('index'))
+    
+    form = SQLFORM(db.mfi, ignore_rw=ignore_rw)
+    
+    if form.accepts(request.vars, session):
+        session.flash = T('New MFI created successfully')
+        redirect(URL('mfilist'))
+    
+    return dict(form=form)
+
+
+# ##########################################################
+# ## insert a new record
+# ###########################################################
 
 def insert():
     (db, table) = get_table(request)
@@ -150,7 +225,6 @@ def insert():
 # ##########################################################
 # ## list all records in table and insert new record
 # ###########################################################
-
 
 def download():
     import os
@@ -263,7 +337,7 @@ def select():
             tb = traceback.format_exc()
             (rows, nrows) = ([], 0)
             response.flash = DIV(T('Invalid Query'), PRE(str(e)))
-    # begin handle upload csv
+    
     csv_table = table or request.vars.table
     if csv_table:
         formcsv = FORM(str(T('or import from csv file')) + ' ',
@@ -279,7 +353,6 @@ def select():
             response.flash = T('data uploaded')
         except Exception as e:
             response.flash = DIV(T('unable to parse csv file'), PRE(str(e)))
-    # end handle upload csv
 
     return dict(
         form=form,
@@ -298,7 +371,6 @@ def select():
 # ##########################################################
 # ## edit delete one record
 # ###########################################################
-
 
 def update():
     (db, table) = get_table(request)
@@ -342,7 +414,6 @@ def update():
 # ##########################################################
 # ## get global variables
 # ###########################################################
-
 
 def state():
     return dict()
@@ -435,7 +506,6 @@ def ccache():
         gae_stats['oldest'] = GetInHMS(time.time() - gae_stats['oldest_item_age'])
         total.update(gae_stats)
     else:
-        # get ram stats directly from the cache object
         ram_stats = cache.ram.stats[request.application]
         ram['hits'] = ram_stats['hit_total'] - ram_stats['misses']
         ram['misses'] = ram_stats['misses']
@@ -471,7 +541,7 @@ def ccache():
                     disk['oldest'] = value[0]
                 disk['keys'].append((key, GetInHMS(time.time() - value[0])))
 
-        ram_keys = list(ram) # ['hits', 'objects', 'ratio', 'entries', 'keys', 'oldest', 'bytes', 'misses']
+        ram_keys = list(ram)
         ram_keys.remove('ratio')
         ram_keys.remove('oldest')
         for key in ram_keys:
@@ -507,52 +577,6 @@ def ccache():
     return dict(form=form, total=total,
                 ram=ram, disk=disk, object_stats=asizeof != False)
 
-
-def table_template(table):
-    from gluon.html import TR, TD, TABLE, TAG
-
-    def FONT(*args, **kwargs):
-        return TAG.font(*args, **kwargs)
-
-    def types(field):
-        f_type = field.type
-        if not isinstance(f_type,str):
-            return ' '
-        elif f_type == 'string':
-            return field.length
-        elif f_type == 'id':
-            return B('pk')
-        elif f_type.startswith('reference') or \
-                f_type.startswith('list:reference'):
-            return B('fk')
-        else:
-            return ' '
-
-    # This is horribe HTML but the only one graphiz understands
-    rows = []
-    cellpadding = 4
-    color = '#000000'
-    bgcolor = '#FFFFFF'
-    face = 'Helvetica'
-    face_bold = 'Helvetica Bold'
-    border = 0
-
-    rows.append(TR(TD(FONT(table, _face=face_bold, _color=bgcolor),
-                           _colspan=3, _cellpadding=cellpadding,
-                           _align='center', _bgcolor=color)))
-    for row in db[table]:
-        rows.append(TR(TD(FONT(row.name, _color=color, _face=face_bold),
-                              _align='left', _cellpadding=cellpadding,
-                              _border=border),
-                       TD(FONT(row.type, _color=color, _face=face),
-                               _align='left', _cellpadding=cellpadding,
-                               _border=border),
-                       TD(FONT(types(row), _color=color, _face=face),
-                               _align='center', _cellpadding=cellpadding,
-                               _border=border)))
-    return '< %s >' % TABLE(*rows, **dict(_bgcolor=bgcolor, _border=1,
-                                          _cellborder=0, _cellspacing=0)
-                             ).xml()
 
 def manage():
     tables = manager_action['tables']
@@ -596,6 +620,7 @@ def manage():
     grid = SQLFORM.smartgrid(table, args=request.args[:2], formname=formname, **kwargs)
     return grid
 
+
 def hooks():
     import functools
     import inspect
@@ -617,18 +642,17 @@ def hooks():
                             details = {'funcname':f.__name__,
                                        'filename':filename[len(request.folder):] if request.folder in filename else None,
                                        'lineno': inspect.getsourcelines(f)[1]}
-                            if details['filename']: # Built in functions as delete_uploaded_files are not editable
+                            if details['filename']:
                                 details['url'] = URL(a='admin',c='default',f='edit', args=[request['application'], details['filename']],vars={'lineno':details['lineno']})
                             if details['filename'] or with_build_it:
                                 functions.append(details)
-                        # compiled app and windows build don't support code inspection
                         except:
                             pass
                 if len(functions):
                     method_hooks.append({'name': op, 'functions':functions})
             if len(method_hooks):
                 tables.append({'name': '%s.%s' % (db_str, t), 'slug': IS_SLUG()('%s.%s' % (db_str,t))[0], 'method_hooks':method_hooks})
-    # Render
+    
     ul_main = UL(_class='nav nav-list')
     for t in tables:
         ul_main.append(A(t['name'], _onclick="collapse('a_%s')" % t['slug']))
@@ -640,17 +664,7 @@ def hooks():
     return ul_main
 
 
-# ##########################################################
-# d3 based model visualizations
-# ###########################################################
-
 def d3_graph_model():
-    ''' See https://www.facebook.com/web2py/posts/145613995589010 from Bruno Rocha
-    and also the app_admin bg_graph_model function
-
-    Create a list of table dicts, called 'nodes'
-    '''
-
     nodes = []
     links = []
 
@@ -677,44 +691,10 @@ def d3_graph_model():
                     f_type.startswith('reference') or
                     f_type.startswith('list:reference')):
                     referenced_table = f_type.split()[1].split('.')[0]
-
                     links.append(dict(source=tablename, target = referenced_table))
 
             nodes.append(dict(name=tablename, type='table', fields = fields))
 
-    # d3 v4 allows individual modules to be specified.  The complete d3 library is included below.
     response.files.append(URL('admin','static','js/d3.min.js'))
     response.files.append(URL('admin','static','js/d3_graph.js'))
     return dict(databases=databases, nodes=nodes, links=links)
-
-
-# ##########################################################
-# ### Custom MFI list & edit
-# ##########################################################
-
-def mfilist():
-    db = get_database(request)
-    if "mfi" not in db.tables:
-        return dict(error="MFI table not found", rows=[])
-
-    rows = db(db.mfi.id > 0).select()
-    return dict(rows=rows)
-
-
-def mfiedit():
-    db = get_database(request)
-    mfi_id = request.args(0)
-    if not mfi_id:
-        session.flash = "Missing ID"
-        redirect(URL("mfilist"))
-
-    record = db.mfi(mfi_id)
-    if not record:
-        session.flash = "MFI not found"
-        redirect(URL("mfilist"))
-
-    form = SQLFORM(db.mfi, record, showid=False)
-    if form.accepts(request.vars, session):
-        response.flash = "MFI updated"
-
-    return dict(form=form, record=record)

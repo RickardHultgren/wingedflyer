@@ -35,6 +35,7 @@ db.define_table(
     Field('name', 'string', notnull=True),
     Field('email', 'string'),
     Field('contact_person', 'string'),
+    Field('country', 'string'),
     Field('notes', 'text'),
 
     Field('b2c_accounts', 'integer', default=0),
@@ -52,24 +53,38 @@ db.mfi.email.requires    = IS_EMPTY_OR(IS_EMAIL())
 db.mfi.b2c_accounts.readable = True
 db.mfi.b2c_accounts.writable = False
 
+# Field labels for better admin UI
+db.mfi.username.label = 'Username'
+db.mfi.password_hash.label = 'Password'
+db.mfi.name.label = 'MFI Name'
+db.mfi.email.label = 'Email Address'
+db.mfi.contact_person.label = 'Contact Person'
+db.mfi.country.label = 'Country'
+db.mfi.notes.label = 'Notes'
+db.mfi.b2c_accounts.label = 'B2C Accounts'
+db.mfi.created_on.label = 'Created On'
 
-# Automatically hash MFI passwords set in appadmin
-def hash_mfi_password(row):
-    # row is a dict-like object, not a form
-    pwd_plain = row.get('password_hash')
 
-    if not pwd_plain:
-        return row  # nothing to hash
+# Automatically hash MFI passwords on insert
+def hash_mfi_password_on_insert(fields):
+    """Hash password on insert"""
+    if 'password_hash' in fields and fields['password_hash']:
+        pwd_plain = fields['password_hash']
+        hashed = bcrypt.hashpw(pwd_plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        fields['password_hash'] = hashed
 
-    # Hash it
-    hashed = bcrypt.hashpw(pwd_plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+# Automatically hash MFI passwords on update
+def hash_mfi_password_on_update(s, fields):
+    """Hash password on update - s is the Set object, fields is the dict of updates"""
+    if 'password_hash' in fields and fields['password_hash']:
+        pwd_plain = fields['password_hash']
+        # Only hash if it's not already a bcrypt hash
+        if not pwd_plain.startswith('$2b$') and not pwd_plain.startswith('$2a$'):
+            hashed = bcrypt.hashpw(pwd_plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            fields['password_hash'] = hashed
 
-    row['password_hash'] = hashed
-    return row
-
-db.mfi._before_insert.append(hash_mfi_password)
-db.mfi._before_update.append(hash_mfi_password)
-
+db.mfi._before_insert.append(hash_mfi_password_on_insert)
+db.mfi._before_update.append(hash_mfi_password_on_update)
 
 
 ############################################################
@@ -108,6 +123,30 @@ db.b2c.username.requires  = IS_NOT_EMPTY()
 db.b2c.real_name.requires = IS_NOT_EMPTY()
 
 
+# Update MFI b2c_accounts count after insert
+def update_mfi_count_on_insert(fields, id):
+    """Update MFI b2c count after inserting a borrower"""
+    mfi_id = fields.get('mfi_id')
+    if mfi_id:
+        count = db(db.b2c.mfi_id == mfi_id).count()
+        db(db.mfi.id == mfi_id).update(b2c_accounts=count)
+
+# Update MFI b2c_accounts count after delete
+def update_mfi_count_on_delete(s):
+    """Update MFI b2c count after deleting a borrower"""
+    # Get the records that will be deleted
+    records = db(s).select(db.b2c.mfi_id)
+    mfi_ids = set([r.mfi_id for r in records])
+    
+    # Delete happens here (handled by web2py)
+    # After delete, update counts
+    for mfi_id in mfi_ids:
+        count = db(db.b2c.mfi_id == mfi_id).count()
+        db(db.mfi.id == mfi_id).update(b2c_accounts=count)
+
+db.b2c._after_insert.append(update_mfi_count_on_insert)
+db.b2c._before_delete.append(update_mfi_count_on_delete)
+
 
 ############################################################
 # 3. TIMELINE MESSAGES
@@ -126,7 +165,6 @@ db.define_table(
 db.b2c_timeline_message.title.requires = IS_NOT_EMPTY()
 
 
-
 ############################################################
 # 4. URGENT MESSAGE (single entry per b2c)
 ############################################################
@@ -139,7 +177,6 @@ db.define_table(
 )
 
 
-
 ############################################################
 # 5. VIEW LOGS
 ############################################################
@@ -150,13 +187,3 @@ db.define_table(
     Field('viewer_ip', 'string'),
     Field('viewed_on', 'datetime', default=request.now)
 )
-
-
-
-############################################################
-# Helper: auto-update B2C count for each MFI
-############################################################
-
-def update_b2c_count(mfi_id):
-    count = db(db.b2c.mfi_id == mfi_id).count()
-    db(db.mfi.id == mfi_id).update(b2c_accounts=count)
