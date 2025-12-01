@@ -38,7 +38,8 @@ db.define_table(
     Field('country', 'string'),
     Field('notes', 'text'),
 
-    Field('b2c_accounts', 'integer', default=0),
+    # This field sets the LIMIT of how many B2C accounts the MFI can create
+    Field('b2c_accounts', 'integer', default=0, comment='Maximum number of B2C accounts allowed'),
 
     Field('created_on', 'datetime', default=request.now),
     format='%(name)s'
@@ -48,10 +49,7 @@ db.define_table(
 db.mfi.username.requires = [IS_NOT_EMPTY(), IS_NOT_IN_DB(db, 'mfi.username')]
 db.mfi.name.requires     = IS_NOT_EMPTY()
 db.mfi.email.requires    = IS_EMPTY_OR(IS_EMAIL())
-
-# b2c count should not be editable by admin
-db.mfi.b2c_accounts.readable = True
-db.mfi.b2c_accounts.writable = False
+db.mfi.b2c_accounts.requires = IS_INT_IN_RANGE(0, 10000)  # Max 10,000 accounts
 
 # Field labels for better admin UI
 db.mfi.username.label = 'Username'
@@ -61,8 +59,13 @@ db.mfi.email.label = 'Email Address'
 db.mfi.contact_person.label = 'Contact Person'
 db.mfi.country.label = 'Country'
 db.mfi.notes.label = 'Notes'
-db.mfi.b2c_accounts.label = 'B2C Accounts'
+db.mfi.b2c_accounts.label = 'Max B2C Accounts (Limit)'
 db.mfi.created_on.label = 'Created On'
+
+# The b2c_accounts field is the LIMIT, so it should be writable by admin
+db.mfi.b2c_accounts.readable = True
+db.mfi.b2c_accounts.writable = True
+db.mfi.b2c_accounts.comment = 'Set the maximum number of B2C accounts this MFI can create'
 
 
 # Automatically hash MFI passwords on insert
@@ -119,33 +122,63 @@ db.define_table(
     format='%(real_name)s'
 )
 
-db.b2c.username.requires  = IS_NOT_EMPTY()
+db.b2c.username.requires  = [IS_NOT_EMPTY(), IS_NOT_IN_DB(db, 'b2c.username')]
 db.b2c.real_name.requires = IS_NOT_EMPTY()
+db.b2c.email.requires = IS_EMPTY_OR(IS_EMAIL())
+
+# Field labels
+db.b2c.mfi_id.label = 'MFI'
+db.b2c.username.label = 'Username'
+db.b2c.password_hash.label = 'Password'
+db.b2c.real_name.label = 'Real Name'
+db.b2c.address.label = 'Address'
+db.b2c.telephone.label = 'Telephone'
+db.b2c.email.label = 'Email'
+db.b2c.social_media.label = 'Social Media'
+db.b2c.amount_borrowed.label = 'Amount Borrowed'
+db.b2c.amount_repaid_b2c_reported.label = 'Amount Repaid (B2C Reported)'
+db.b2c.location_lat.label = 'Latitude'
+db.b2c.location_lng.label = 'Longitude'
+db.b2c.started_working_today.label = 'Started Working Today'
+db.b2c.qr_code_url.label = 'QR Code URL'
+db.b2c.micro_page_text.label = 'Micro Page Text'
 
 
-# Update MFI b2c_accounts count after insert
-def update_mfi_count_on_insert(fields, id):
-    """Update MFI b2c count after inserting a borrower"""
+# Validate that MFI has not exceeded their B2C account limit
+def validate_b2c_limit(fields):
+    """Check if MFI can create another B2C account"""
     mfi_id = fields.get('mfi_id')
     if mfi_id:
-        count = db(db.b2c.mfi_id == mfi_id).count()
-        db(db.mfi.id == mfi_id).update(b2c_accounts=count)
+        mfi = db.mfi(mfi_id)
+        if mfi:
+            current_count = db(db.b2c.mfi_id == mfi_id).count()
+            if current_count >= mfi.b2c_accounts:
+                raise Exception('MFI has reached maximum B2C account limit (%d)' % mfi.b2c_accounts)
 
-# Update MFI b2c_accounts count after delete
-def update_mfi_count_on_delete(s):
-    """Update MFI b2c count after deleting a borrower"""
-    # Get the records that will be deleted
-    records = db(s).select(db.b2c.mfi_id)
-    mfi_ids = set([r.mfi_id for r in records])
-    
-    # Delete happens here (handled by web2py)
-    # After delete, update counts
-    for mfi_id in mfi_ids:
-        count = db(db.b2c.mfi_id == mfi_id).count()
-        db(db.mfi.id == mfi_id).update(b2c_accounts=count)
+db.b2c._before_insert.append(validate_b2c_limit)
 
-db.b2c._after_insert.append(update_mfi_count_on_insert)
-db.b2c._before_delete.append(update_mfi_count_on_delete)
+
+# Hash B2C passwords
+def hash_b2c_password_on_insert(fields):
+    """Hash B2C password on insert if provided"""
+    if 'password_hash' in fields and fields['password_hash']:
+        pwd_plain = fields['password_hash']
+        # Only hash if not already hashed
+        if not pwd_plain.startswith('$2b$') and not pwd_plain.startswith('$2a$'):
+            hashed = bcrypt.hashpw(pwd_plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            fields['password_hash'] = hashed
+
+def hash_b2c_password_on_update(s, fields):
+    """Hash B2C password on update if provided"""
+    if 'password_hash' in fields and fields['password_hash']:
+        pwd_plain = fields['password_hash']
+        # Only hash if not already hashed
+        if not pwd_plain.startswith('$2b$') and not pwd_plain.startswith('$2a$'):
+            hashed = bcrypt.hashpw(pwd_plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            fields['password_hash'] = hashed
+
+db.b2c._before_insert.append(hash_b2c_password_on_insert)
+db.b2c._before_update.append(hash_b2c_password_on_update)
 
 
 ############################################################
@@ -163,6 +196,10 @@ db.define_table(
 )
 
 db.b2c_timeline_message.title.requires = IS_NOT_EMPTY()
+db.b2c_timeline_message.b2c_id.label = 'B2C Account'
+db.b2c_timeline_message.title.label = 'Title'
+db.b2c_timeline_message.the_message.label = 'Message'
+db.b2c_timeline_message.the_date.label = 'Date'
 
 
 ############################################################
@@ -176,6 +213,9 @@ db.define_table(
     Field('created_on', 'datetime', default=request.now)
 )
 
+db.b2c_urgent_message.b2c_id.label = 'B2C Account'
+db.b2c_urgent_message.the_message.label = 'Urgent Message'
+
 
 ############################################################
 # 5. VIEW LOGS
@@ -187,3 +227,7 @@ db.define_table(
     Field('viewer_ip', 'string'),
     Field('viewed_on', 'datetime', default=request.now)
 )
+
+db.b2c_micro_page_view.b2c_id.label = 'B2C Account'
+db.b2c_micro_page_view.viewer_ip.label = 'Viewer IP'
+db.b2c_micro_page_view.viewed_on.label = 'Viewed On'

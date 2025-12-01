@@ -42,13 +42,13 @@
 
 
             WingedFlyer</a>
-        <div class="d-flex">
-            {{if auth.is_logged_in():}}
+        <!--div class="d-flex">
+            {{#if auth.is_logged_in():}}
                 <a href="{{=URL('user/logout')}}" class="btn btn-outline-secondary btn-sm">Logout</a>
-            {{else:}}
+            {{#else:}}
                 <a href="{{=URL('user/login')}}" class="btn btn-outline-primary btn-sm">Login</a>
-            {{pass}}
-        </div>
+            {{#pass}}
+        </div-->
     </div>
 </nav>
 
