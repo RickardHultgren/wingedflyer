@@ -1,0 +1,98 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Welcome, {{=mfi}}</h2>
+        </div>
+        <div class="col-md-4 text-right">
+            <a class="btn btn-secondary" href="{{=URL('logout')}}">Log out</a>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Account Status:</strong> 
+        {{=current_count}} / {{=max_accounts}} B2C accounts used
+        {{if current_count >= max_accounts:}}
+            <span class="badge badge-warning">Limit Reached</span>
+        {{pass}}
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <h3>Your B2C Borrowers</h3>
+            {{if current_count < max_accounts:}}
+                <a href="{{=URL('create_b2c')}}" class="btn btn-success mb-3">
+                    <i class="fas fa-plus"></i> Create New B2C Account
+                </a>
+            {{else:}}
+                <button class="btn btn-secondary mb-3" disabled>
+                    Maximum accounts reached
+                </button>
+            {{pass}}
+        </div>
+    </div>
+
+    {{if b2c_accounts:}}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th class="text-right">Borrowed</th>
+                    <th class="text-right">Repaid</th>
+                    <th class="text-right">Balance</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{for b in b2c_accounts:}}
+                {{balance = b.amount_borrowed - b.amount_repaid_b2c_reported}}
+                <tr>
+                    <td><strong>{{=b.real_name}}</strong></td>
+                    <td>{{=b.username}}</td>
+                    <td>
+                        <a href="{{=URL('b2c', args=[b.id])}}" class="btn btn-sm btn-primary">
+                            View Details
+                        </a>
+                        <a href="{{=URL('edit_b2c', args=[b.id])}}" class="btn btn-sm btn-warning">
+                            Edit
+                        </a>
+                    </td>
+                    <td class="text-right">{{='%.2f' % (b.amount_borrowed or 0)}}</td>
+                    <td class="text-right">{{='%.2f' % (b.amount_repaid_b2c_reported or 0)}}</td>
+                    <td class="text-right">
+                        {{if balance > 0:}}
+                            <span class="text-danger">{{='%.2f' % balance}}</span>
+                        {{elif balance == 0:}}
+                            <span class="text-success">0.00</span>
+                        {{else:}}
+                            <span class="text-info">{{='%.2f' % balance}}</span>
+                        {{pass}}
+                    </td>
+                    <td>
+                        {{if b.started_working_today:}}
+                            <span class="badge badge-success">Active Today</span>
+                        {{else:}}
+                            <span class="badge badge-secondary">Inactive</span>
+                        {{pass}}
+                    </td>
+                </tr>
+                {{pass}}
+            </tbody>
+        </table>
+    </div>
+    {{else:}}
+    <div class="alert alert-warning">
+        <strong>No B2C accounts yet.</strong> Click "Create New B2C Account" to get started.
+    </div>
+    {{pass}}
+</div>
+
+<style>
+    .table td, .table th {
+        vertical-align: middle;
+    }
+</style>
