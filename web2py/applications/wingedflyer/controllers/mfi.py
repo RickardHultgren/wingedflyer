@@ -50,6 +50,7 @@ def login():
             except Exception as e:
                 response.flash = "Login error. Please contact administrator."
                 print("Login error: %s" % str(e))  # Log for debugging
+            redirect(URL(args=request.args, vars=request.vars))
         else:
             response.flash = "Invalid username or password"
     elif form.errors:

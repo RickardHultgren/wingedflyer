@@ -1,0 +1,96 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-3">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Your Flyers</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{=URL('editor')}}"
+                       class="list-group-item list-group-item-action {{='active' if not current_flyer else ''}}">
+                        ➕ New Flyer
+                    </a>
+                    
+                    {{for flyer in flyers:}}
+                    <a href="{{=URL('editor', args=[flyer.id])}}"
+                       class="list-group-item list-group-item-action {{='active' if current_flyer and current_flyer.id == flyer.id else ''}}">
+                        {{=flyer.title}}
+                    </a>
+                    {{pass}}
+
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{='Edit' if current_flyer else 'Create'}} Flyer</h4>
+                </div>
+                <div class="card-body">
+
+                    {{if session.flash:}}
+                        <div class="alert alert-info alert-dismissible fade show">
+                            {{=session.flash}}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {{pass}}
+
+                    <form action="{{=URL('save')}}" method="post">
+                        <input type="hidden" name="b2c_id" value="{{=current_flyer.id if current_flyer else ''}}"-->
+
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input class="form-control" name="title"
+                                   value="{{=current_flyer.title if current_flyer else ''}}"
+                                   placeholder="My Flyer Title" required>
+                        </div>
+
+<div class="mb-3">
+    <label class="form-label">
+        Content (Markdown)
+        <a href="https://www.markdownguide.org/cheat-sheet/"
+           target="_blank"
+           class="small text-muted">(Guide)</a>
+    </label>
+    <textarea name="thecontent" class="form-control font-monospace"
+              rows="15"
+              placeholder="# Heading&#10;Your content here..."
+              required>{{=current_flyer.thecontent if current_flyer else ''}}</textarea>
+</div>
+
+                        {{if current_flyer and current_flyer.updated_on:}}
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    Last updated: {{=current_flyer.updated_on.strftime('%Y-%m-%d %H:%M')}}
+                                </small>
+                            </div>
+                        {{pass}}
+
+                        <div class="btn-group">
+                            <button type="submit" class="btn btn-primary">💾 Save</button>
+
+                            {{if current_flyer:}}
+                                <a href="{{=URL('preview', args=[current_flyer.id])}}"
+                                   class="btn btn-secondary">👁️ Preview</a>
+
+                                <a href="{{=URL('view_b2c', args=[current_flyer.id])}}"
+                                   class="btn btn-info" target="_blank">🌐 Public View</a>
+
+                                <a href="{{=URL('qr', args=[current_flyer.id])}}"
+                                   class="btn btn-success" target="_blank">📱 QR Code</a>
+
+                                <a href="{{=URL('delete', args=[current_flyer.id])}}"
+                                   class="btn btn-danger"
+                                   onclick="return confirm('Delete this flyer?')">🗑️ Delete</a>
+                            {{pass}}
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

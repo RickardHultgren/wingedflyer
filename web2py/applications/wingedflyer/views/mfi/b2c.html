@@ -1,48 +1,378 @@
 {{extend 'layout.html'}}
 
-<h2>Vendor: {{=vendor.real_name}}</h2>
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>{{=borrower.real_name}}</h2>
+            <p class="text-muted">Username: {{=borrower.username}}</p>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{{=URL('recalculate_status', args=[borrower.id])}}" class="btn btn-outline-info btn-sm">
+                🔄 Recalculate Status
+            </a>
+            <a href="{{=URL('dashboard')}}" class="btn btn-secondary">← Back</a>
+        </div>
+    </div>
 
-<h3>Contact Info</h3>
-<p><strong>Address:</strong> {{=vendor.address}}</p>
-<p><strong>Phone:</strong> {{=vendor.phone}}</p>
-<p><strong>Email:</strong> {{=vendor.email}}</p>
+    <!-- Traffic Light Status Card -->
+    <div class="card mb-4 {{='border-success' if borrower.traffic_light_status == 'GREEN' else ('border-warning' if borrower.traffic_light_status == 'YELLOW' else 'border-danger')}}">
+        <div class="card-header {{='bg-success' if borrower.traffic_light_status == 'GREEN' else ('bg-warning' if borrower.traffic_light_status == 'YELLOW' else 'bg-danger')}} text-white">
+            <h5 class="mb-0">
+                {{if borrower.traffic_light_status == 'GREEN':}}
+                    🟢 GREEN Status - High Autonomy
+                {{elif borrower.traffic_light_status == 'YELLOW':}}
+                    🟡 YELLOW Status - Standard Protocol
+                {{else:}}
+                    🔴 RED Status - High Support
+                {{pass}}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Visibility Score</h6>
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar {{='bg-success' if (borrower.visibility_score or 0) >= 6 else ('bg-warning' if (borrower.visibility_score or 0) >= 4 else 'bg-danger')}}"
+                             role="progressbar" 
+                             style="width: {{=int((borrower.visibility_score or 0) / 7.0 * 100)}}%;"
+                             aria-valuenow="{{=borrower.visibility_score or 0}}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="7">
+                            {{=borrower.visibility_score or 0}}/7
+                        </div>
+                    </div>
+                    
+                    <p><strong>Last Updated:</strong> {{=borrower.last_status_update.strftime('%Y-%m-%d %H:%M') if borrower.last_status_update else 'Never'}}</p>
+                    
+                    {{if borrower.status_notes:}}
+                    <p><strong>Notes:</strong> <small class="text-muted">{{=borrower.status_notes}}</small></p>
+                    {{pass}}
+                </div>
+                <div class="col-md-6">
+                    <h6>Current Protocol</h6>
+                    {{if protocol:}}
+                    <ul class="list-unstyled">
+                        <li><strong>Grace Period:</strong> {{=protocol['grace_period_days']}} days</li>
+                        <li><strong>First Contact:</strong> {{=protocol['first_contact']}}</li>
+                        <li><strong>Tone:</strong> {{=protocol['tone']}}</li>
+                        <li><strong>Max Loan Increase:</strong> {{=int(protocol['loan_increase_max'] * 100)}}%</li>
+                        <li><strong>Meeting Frequency:</strong> {{=protocol['meeting_frequency']}}</li>
+                    </ul>
+                    {{pass}}
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-3 mb-0">
+                <strong>What this means:</strong>
+                {{if borrower.traffic_light_status == 'GREEN':}}
+                    This borrower has excellent visibility - consistent payments, responsive communication, and proactive problem-solving. Give them autonomy with minimal oversight.
+                {{elif borrower.traffic_light_status == 'YELLOW':}}
+                    This borrower shows reasonable visibility with some predictability. Apply standard protocols and monitoring.
+                {{else:}}
+                    This borrower needs high support to improve visibility. Focus on building communication habits and understanding their situation.
+                {{pass}}
+            </div>
+        </div>
+    </div>
 
-<h3>Loan Status</h3>
-<p><strong>Borrowed:</strong> {{=vendor.amount_borrowed}}</p>
-<p><strong>Paid Back:</strong> {{=vendor.amount_paid_back}}</p>
+    <!-- Borrower Info Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Borrower Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Address:</strong> {{=borrower.address or 'Not provided'}}</p>
+                    <p><strong>Telephone:</strong> {{=borrower.telephone or 'Not provided'}}</p>
+                    <p><strong>Email:</strong> {{=borrower.email or 'Not provided'}}</p>
+                    <p><strong>Social Media:</strong> {{=borrower.social_media or 'Not provided'}}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Location:</strong> 
+                        {{if borrower.location_lat and borrower.location_lng:}}
+                            {{='%.6f, %.6f' % (borrower.location_lat, borrower.location_lng)}}
+                        {{else:}}
+                            Not set
+                        {{pass}}
+                    </p>
+                    <p><strong>Working Today:</strong> 
+                        {{if borrower.started_working_today:}}
+                            <span class="badge badge-success">Yes</span>
+                        {{else:}}
+                            <span class="badge badge-secondary">No</span>
+                        {{pass}}
+                    </p>
+                    <p><strong>Created:</strong> {{=borrower.created_on.strftime('%Y-%m-%d %H:%M')}}</p>
+                </div>
+            </div>
+            <div class="mt-2">
+                <a href="{{=URL('edit_b2c', args=[borrower.id])}}" class="btn btn-warning">Edit Profile</a>
+            </div>
+        </div>
+    </div>
 
-<h3>Working Status</h3>
-<p>{{='Working now' if vendor.is_working else 'Not working'}}</p>
+    <!-- Financial Summary Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Financial Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <h3>{{='%.2f' % (borrower.amount_borrowed or 0)}}</h3>
+                    <p class="text-muted">Amount Borrowed</p>
+                </div>
+                <div class="col-md-4">
+                    <h3>{{='%.2f' % (borrower.amount_repaid_b2c_reported or 0)}}</h3>
+                    <p class="text-muted">Amount Repaid</p>
+                </div>
+                <div class="col-md-4">
+                    <h3 class="{{='text-danger' if balance > 0 else 'text-success'}}">
+                        {{='%.2f' % balance}}
+                    </h3>
+                    <p class="text-muted">Outstanding Balance</p>
+                </div>
+            </div>
+            <hr>
+            <h6>Update Financial Information</h6>
+            {{=repay_form}}
+        </div>
+    </div>
 
-<hr>
+    <!-- Payment Tracking Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">📊 Payment Tracking</h5>
+        </div>
+        <div class="card-body">
+            <h6>Record New Payment</h6>
+            {{=payment_form}}
+            
+            <hr>
+            
+            <h6>Recent Payments</h6>
+            {{if payments:}}
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Paid Date</th>
+                                <th>Days Late</th>
+                                <th>Method</th>
+                                <th>Notes</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{for payment in payments:}}
+                            <tr>
+                                <td>{{='%.2f' % payment.amount}}</td>
+                                <td>{{=payment.due_date.strftime('%Y-%m-%d')}}</td>
+                                <td>{{=payment.paid_date.strftime('%Y-%m-%d') if payment.paid_date else 'Not paid'}}</td>
+                                <td>
+                                    {{if payment.days_late is not None:}}
+                                        <span class="badge {{='badge-success' if payment.days_late <= 0 else ('badge-warning' if payment.days_late <= 3 else 'badge-danger')}}">
+                                            {{if payment.days_late < 0:}}
+                                                {{=payment.days_late}} (early)
+                                            {{elif payment.days_late == 0:}}
+                                                On time
+                                            {{else:}}
+                                                +{{=payment.days_late}}
+                                            {{pass}}
+                                        </span>
+                                    {{else:}}
+                                        -
+                                    {{pass}}
+                                </td>
+                                <td>{{=payment.payment_method or '-'}}</td>
+                                <td><small>{{=payment.notes[:50] + '...' if payment.notes and len(payment.notes) > 50 else (payment.notes or '-')}}</small></td>
+                                <td>
+                                    <a href="{{=URL('delete_payment', args=[payment.id])}}" 
+                                       class="btn btn-sm btn-danger"
+                                       onclick="return confirm('Delete this payment?');">
+                                        ✕
+                                    </a>
+                                </td>
+                            </tr>
+                            {{pass}}
+                        </tbody>
+                    </table>
+                </div>
+            {{else:}}
+                <p class="text-muted">No payment records yet.</p>
+            {{pass}}
+        </div>
+    </div>
 
-<h3>Messages</h3>
-<ul>
-    {{for m in messages:}}
-    <li>
-        <strong>{{=m.created_on}} ({{=m.sender}}):</strong> {{=m.message}}
-    </li>
-    {{pass}}
-</ul>
+    <!-- Communication Log Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">💬 Communication Log</h5>
+        </div>
+        <div class="card-body">
+            <h6>Log New Communication</h6>
+            {{=comm_form}}
+            
+            <hr>
+            
+            <h6>Recent Communications</h6>
+            {{if communications:}}
+                <div class="list-group">
+                    {{for comm in communications:}}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                {{if comm.initiated_by == 'BORROWER':}}
+                                    <span class="badge badge-success">Borrower</span>
+                                {{else:}}
+                                    <span class="badge badge-primary">MFI</span>
+                                {{pass}}
+                                {{=comm.communication_type}}
+                                {{if comm.is_proactive:}}
+                                    <span class="badge badge-warning">⚠️ Proactive</span>
+                                {{pass}}
+                            </h6>
+                            <small>{{=comm.communication_date.strftime('%Y-%m-%d %H:%M')}}</small>
+                        </div>
+                        {{if comm.response_time_hours is not None:}}
+                        <p class="mb-1">
+                            <small>
+                                Response time: 
+                                <span class="badge {{='badge-success' if comm.response_time_hours <= 48 else 'badge-danger'}}">
+                                    {{=comm.response_time_hours}} hours
+                                </span>
+                            </small>
+                        </p>
+                        {{pass}}
+                        {{if comm.message_summary:}}
+                        <p class="mb-1">{{=comm.message_summary}}</p>
+                        {{pass}}
+                        <a href="{{=URL('delete_communication', args=[comm.id])}}" 
+                           class="btn btn-sm btn-danger float-right"
+                           onclick="return confirm('Delete this communication log?');">
+                            Delete
+                        </a>
+                    </div>
+                    {{pass}}
+                </div>
+            {{else:}}
+                <p class="text-muted">No communication records yet.</p>
+            {{pass}}
+        </div>
+    </div>
 
-<hr>
+    <!-- Urgent Message Card -->
+    <div class="card mb-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">🚨 Urgent Message</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">This message will be prominently displayed on the borrower's public micro-page.</p>
+            {{=urgent_form}}
+        </div>
+    </div>
 
-<h3>Send Message to Vendor</h3>
-<form action="{{=URL('fmi', 'send_message', args=[vendor.id])}}" method="post">
-    <textarea name="message" rows="3" style="width:100%;"></textarea>
-    <button class="btn-primary">Send</button>
-</form>
+    <!-- Timeline Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">📅 Timeline Messages</h5>
+        </div>
+        <div class="card-body">
+            <h6>Add New Timeline Message</h6>
+            {{=timeline_form}}
+            
+            <hr>
+            
+            <h6>Existing Timeline Messages</h6>
+            {{if timeline:}}
+                <div class="list-group mt-3">
+                    {{for msg in timeline:}}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{=msg.title}}</h6>
+                            <small>{{=msg.the_date.strftime('%Y-%m-%d')}}</small>
+                        </div>
+                        <p class="mb-1">{{=msg.the_message or ''}}</p>
+                        <small class="text-muted">Created: {{=msg.created_on.strftime('%Y-%m-%d %H:%M')}}</small>
+                        <a href="{{=URL('delete_timeline', args=[msg.id])}}" 
+                           class="btn btn-sm btn-danger float-right"
+                           onclick="return confirm('Delete this timeline message?');">
+                            Delete
+                        </a>
+                    </div>
+                    {{pass}}
+                </div>
+            {{else:}}
+                <p class="text-muted">No timeline messages yet.</p>
+            {{pass}}
+        </div>
+    </div>
 
-<hr>
+    <!-- Micro-Page & QR Code Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">🌐 Public Micro-Page</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <p><strong>Micro-Page URL:</strong></p>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" value="{{=micro_page_url}}" id="microPageUrl" readonly>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="button" 
+                                    onclick="copyToClipboard()">Copy</button>
+                            <a href="{{=micro_page_url}}" target="_blank" class="btn btn-primary">
+                                Visit Page
+                            </a>
+                        </div>
+                    </div>
+                    <p class="text-muted">Share this URL or QR code with potential donors and supporters.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <p><strong>QR Code:</strong></p>
+                    <img src="{{=qr_url}}" alt="QR Code" class="img-fluid border" style="max-width: 200px;">
+                    <br>
+                    <a href="{{=qr_url}}" download="qr_{{=borrower.username}}.png" class="btn btn-sm btn-info mt-2">
+                        Download QR
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-<h3>Customer Page</h3>
-<p>
-    <a href="{{=URL('vendor', 'public', args=[vendor.username], scheme=True, host=True)}}" target="_blank">
-        Open Customer Page
-    </a>
-</p>
-<p>
-    <a href="{{=URL('vendor', 'qr', args=[vendor.username])}}" target="_blank">
-        View QR Code
-    </a>
-</p>
+<script>
+function copyToClipboard() {
+    var copyText = document.getElementById("microPageUrl");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    alert("URL copied to clipboard!");
+}
+</script>
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .border-success {
+        border-width: 3px !important;
+    }
+    
+    .border-warning {
+        border-width: 3px !important;
+    }
+    
+    .border-danger {
+        border-width: 3px !important;
+    }
+    
+    .progress {
+        font-weight: bold;
+    }
+</style>

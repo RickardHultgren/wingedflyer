@@ -1,0 +1,280 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Welcome, {{=borrower.real_name}}!</h2>
+            <p class="text-muted">Managed by: {{=mfi.name}}</p>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{{=URL('logout')}}" class="btn btn-secondary">Logout</a>
+        </div>
+    </div>
+
+    <!-- Urgent Message Alert -->
+    {{if urgent_msg and urgent_msg.the_message:}}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h5 class="alert-heading">
+            <i class="fas fa-exclamation-triangle"></i> Important Update from Your MFI
+        </h5>
+        <p class="mb-0">{{=urgent_msg.the_message}}</p>
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    </div>
+    {{pass}}
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3>{{='%.2f' % (borrower.amount_borrowed or 0)}}</h3>
+                    <p class="mb-0">Amount Borrowed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3>{{='%.2f' % (borrower.amount_repaid_b2c_reported or 0)}}</h3>
+                    <p class="mb-0">Amount Repaid</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card {{='bg-danger' if balance > 0 else 'bg-info'}} text-white">
+                <div class="card-body text-center">
+                    <h3>{{='%.2f' % balance}}</h3>
+                    <p class="mb-0">Outstanding Balance</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h3>{{=view_count}}</h3>
+                    <p class="mb-0">Page Views</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Repayment Progress -->
+    {{if borrower.amount_borrowed > 0:}}
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Repayment Progress</h5>
+        </div>
+        <div class="card-body">
+            <div class="progress" style="height: 30px;">
+                <div class="progress-bar bg-success" role="progressbar" 
+                     style="width: {{='%.1f' % repayment_percentage}}%;" 
+                     aria-valuenow="{{=repayment_percentage}}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
+                    {{='%.1f' % repayment_percentage}}% Repaid
+                </div>
+            </div>
+            <p class="text-muted mt-2 mb-0">
+                {{if repayment_percentage >= 100:}}
+                    <i class="fas fa-check-circle text-success"></i> Congratulations! You've fully repaid your loan!
+                {{elif repayment_percentage >= 75:}}
+                    <i class="fas fa-star text-warning"></i> Great progress! You're almost there!
+                {{elif repayment_percentage >= 50:}}
+                    <i class="fas fa-thumbs-up text-info"></i> You're halfway there. Keep going!
+                {{else:}}
+                    <i class="fas fa-info-circle text-primary"></i> Continue making regular payments.
+                {{pass}}
+            </p>
+        </div>
+    </div>
+    {{pass}}
+
+    <!-- Action Cards Row -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-qrcode fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Micro-Page & QR Code</h5>
+                    <p class="card-text">Manage your public profile and share your QR code</p>
+                    <a href="{{=URL('editor')}}" class="btn btn-primary">Manage Page</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-edit fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">My Profile</h5>
+                    <p class="card-text">Update your contact information and details</p>
+                    <a href="{{=URL('profile')}}" class="btn btn-success">Edit Profile</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-envelope fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Contact MFI</h5>
+                    <p class="card-text">Send a message to {{=mfi.name}}</p>
+                    <a href="{{=URL('contact_mfi')}}" class="btn btn-info">Send Message</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Timeline -->
+    {{if recent_timeline:}}
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Recent Updates</h5>
+        </div>
+        <div class="card-body">
+            <div class="list-group list-group-flush">
+                {{for msg in recent_timeline:}}
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">
+                            {{if msg.title.startswith('[From Borrower]'):}}
+                                <span class="badge badge-info">You</span>
+                            {{else:}}
+                                <span class="badge badge-primary">MFI</span>
+                            {{pass}}
+                            {{=msg.title.replace('[From Borrower] ', '')}}
+                        </h6>
+                        <small>{{=msg.the_date.strftime('%Y-%m-%d')}}</small>
+                    </div>
+                    {{if msg.the_message:}}
+                    <p class="mb-1">{{=msg.the_message}}</p>
+                    {{pass}}
+                </div>
+                {{pass}}
+            </div>
+            <div class="text-center mt-3">
+                <a href="{{=URL('timeline')}}" class="btn btn-sm btn-outline-secondary">
+                    View Complete Timeline
+                </a>
+            </div>
+        </div>
+    </div>
+    {{pass}}
+
+    <!-- Quick Share Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Quick Share</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <p><strong>Your Micro-Page URL:</strong></p>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" value="{{=micro_page_url}}" id="quickShareUrl" readonly>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyUrl()">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <a href="{{=micro_page_url}}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <img src="{{=qr_url}}" alt="QR Code" class="img-fluid border" style="max-width: 120px;">
+                    <br>
+                    <a href="{{=URL('download_qr')}}" class="btn btn-sm btn-dark mt-2">
+                        <i class="fas fa-download"></i> Download QR
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Page Views -->
+    {{if recent_views:}}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Recent Page Views (Last 10)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Viewer IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{for view in recent_views:}}
+                        <tr>
+                            <td>{{=view.viewed_on.strftime('%Y-%m-%d %H:%M:%S')}}</td>
+                            <td>{{=view.viewer_ip}}</td>
+                        </tr>
+                        {{pass}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {{pass}}
+
+    <!-- Work Status Toggle -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1">
+                        Work Status: 
+                        {{if borrower.started_working_today:}}
+                            <span class="badge badge-success">Working Today</span>
+                        {{else:}}
+                            <span class="badge badge-secondary">Not Working</span>
+                        {{pass}}
+                    </h5>
+                    <p class="text-muted mb-0">Update this status daily on your micro-page</p>
+                </div>
+                <a href="{{=URL('micropage')}}" class="btn btn-outline-primary">
+                    Update Status
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyUrl() {
+    var copyText = document.getElementById("quickShareUrl");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    
+    // Show feedback
+    var btn = event.target.closest('button');
+    var originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    btn.classList.add('btn-success');
+    btn.classList.remove('btn-outline-secondary');
+    
+    setTimeout(function() {
+        btn.innerHTML = originalText;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-secondary');
+    }, 2000);
+}
+</script>
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+</style>
