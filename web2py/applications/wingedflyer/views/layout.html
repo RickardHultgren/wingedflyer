@@ -63,20 +63,11 @@
                 </div>
 
                 <div class="list-group list-group-flush">
-                    {{is_active = (not flyer_id)}}
+                    {{is_active = (not b2c_id)}}
                     <a href="{{=URL('editor')}}" class="list-group-item list-group-item-action{{=' active' if is_active else ''}}">
                         <strong>+ New Flyer</strong>
                     </a>
 
-                    {{for theflyer in flyer:}}
-                        {{is_current = (flyer_id and str(theflyer.id) == str(flyer_id))}}
-                        <a href="{{=URL('editor', args=[theflyer.id])}}" 
-                           class="list-group-item list-group-item-action{{=' active' if is_current else ''}}">
-                            {{=theflyer.title}}
-                            <br>
-                            <small class="text-muted">{{=theflyer.updated_on.strftime('%Y-%m-%d %H:%M')}}</small>
-                        </a>
-                    {{pass}}
                 </div>
             </div>
         </div>
