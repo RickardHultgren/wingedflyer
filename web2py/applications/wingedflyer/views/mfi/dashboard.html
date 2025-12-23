@@ -96,17 +96,9 @@
                         </thead>
                         <tbody>
                             {{for acc in b2c_accounts:}}
-                            {{#
-                            #balance = acc.amount_borrowed - acc.amount_repaid_b2c_reported
-                            #status_class = 'success' if acc.traffic_light_status == 'GREEN' else ('warning' if acc.traffic_light_status == 'YELLOW' else 'danger')
-                            #status_emoji = '🟢' if acc.traffic_light_status == 'GREEN' else ('🟡' if acc.traffic_light_status == 'YELLOW' else '🔴')
-                            }}
+                            
                             <tr>
-                                <td>
-                                    <!--span class="badge bg-{{#=status_class}}">
-                                        {{#=status_emoji}} {{#=acc.traffic_light_status or 'YELLOW'}}
-                                    </span-->
-                                </td>
+
                                 <td>
                                     <strong>{{=acc.real_name}}</strong>
                                 </td>
