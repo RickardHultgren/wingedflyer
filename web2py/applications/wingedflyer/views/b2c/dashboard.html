@@ -12,18 +12,6 @@
         </div>
     </div>
 
-    <!-- Urgent Message Alert -->
-    {{if urgent_msg and urgent_msg.the_message:}}
-    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <h5 class="alert-heading">
-            <i class="fas fa-exclamation-triangle"></i> Important Update from Your MFI
-        </h5>
-        <p class="mb-0">{{=urgent_msg.the_message}}</p>
-        <button type="button" class="close" data-dismiss="alert">
-            <span>&times;</span>
-        </button>
-    </div>
-    {{pass}}
 
     <!-- Quick Stats -->
     <div class="row mb-4">
