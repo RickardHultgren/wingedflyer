@@ -12,43 +12,6 @@
         </div>
     </div>
 
-
-    <!-- Quick Stats -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <h3>{{='%.2f' % (borrower.amount_borrowed or 0)}}</h3>
-                    <p class="mb-0">Amount Borrowed</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <h3>{{='%.2f' % (borrower.amount_repaid_b2c_reported or 0)}}</h3>
-                    <p class="mb-0">Amount Repaid</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card {{='bg-danger' if balance > 0 else 'bg-info'}} text-white">
-                <div class="card-body text-center">
-                    <h3>{{='%.2f' % balance}}</h3>
-                    <p class="mb-0">Outstanding Balance</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body text-center">
-                    <h3>{{=view_count}}</h3>
-                    <p class="mb-0">Page Views</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Repayment Progress -->
     {{if borrower.amount_borrowed > 0:}}
     <div class="card mb-4">
