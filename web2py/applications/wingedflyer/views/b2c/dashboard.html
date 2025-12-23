@@ -11,7 +11,24 @@
             <a href="{{=URL('logout')}}" class="btn btn-secondary">Logout</a>
         </div>
     </div>
-    {{borrower}}
+    <table class="table table-sm table-bordered">
+        <thead class="thead-light">
+            <tr>
+                <th style="width: 30%;">Field</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{for field in mfi._fields:}}
+            <tr>
+                <td><strong>{{=field}}</strong></td>
+                <td>
+                    {{=mfi[field] if mfi[field] is not None else ''}}
+                </td>
+            </tr>
+            {{pass}}
+        </tbody>
+    </table>
     <!-- Repayment Progress -->
     {{if borrower.amount_borrowed > 0:}}
     <div class="card mb-4">
