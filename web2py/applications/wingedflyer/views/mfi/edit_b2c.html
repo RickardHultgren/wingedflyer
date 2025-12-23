@@ -24,23 +24,6 @@
                     <p><strong>Email:</strong> {{=borrower.email or 'Not provided'}}</p>
                     <p><strong>Social Media:</strong> {{=borrower.social_media or 'Not provided'}}</p>
                 </div>
-                <div class="col-md-6">
-                    <p><strong>Location:</strong> 
-                        {{if borrower.location_lat and borrower.location_lng:}}
-                            {{='%.6f, %.6f' % (borrower.location_lat, borrower.location_lng)}}
-                        {{else:}}
-                            Not set
-                        {{pass}}
-                    </p>
-                    <p><strong>Working Today:</strong> 
-                        {{if borrower.started_working_today:}}
-                            <span class="badge badge-success">Yes</span>
-                        {{else:}}
-                            <span class="badge badge-secondary">No</span>
-                        {{pass}}
-                    </p>
-                    <p><strong>Created:</strong> {{=borrower.created_on.strftime('%Y-%m-%d %H:%M')}}</p>
-                </div>
             </div>
             <div class="mt-2">
                 <a href="{{=URL('edit_b2c', args=[borrower.id])}}" class="btn btn-warning">Edit Profile</a>
