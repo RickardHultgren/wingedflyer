@@ -113,38 +113,6 @@
     </div>
     {{pass}}
 
-    <!-- Quick Share Section -->
-    <div class="card mb-4">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">Quick Share</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-8">
-                    <p><strong>Your Micro-Page URL:</strong></p>
-                    <div class="input-group mb-3">
-                        <input type="text" class="form-control" value="{{=micro_page_url}}" id="quickShareUrl" readonly>
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary" type="button" onclick="copyUrl()">
-                                <i class="fas fa-copy"></i> Copy
-                            </button>
-                            <a href="{{=micro_page_url}}" target="_blank" class="btn btn-primary">
-                                <i class="fas fa-external-link-alt"></i> View
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 text-center">
-                    <img src="{{=qr_url}}" alt="QR Code" class="img-fluid border" style="max-width: 120px;">
-                    <br>
-                    <a href="{{=URL('download_qr')}}" class="btn btn-sm btn-dark mt-2">
-                        <i class="fas fa-download"></i> Download QR
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Recent Page Views -->
     {{if recent_views:}}
     <div class="card mb-4">
