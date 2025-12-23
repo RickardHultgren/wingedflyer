@@ -35,30 +35,6 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card bg-success text-white">
-                <div class="card-body">
-                    <h3 class="mb-0">{{=sum(1 for acc in b2c_accounts if acc.traffic_light_status == 'GREEN')}}</h3>
-                    <p class="mb-0">🟢 Green Status</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card bg-warning text-white">
-                <div class="card-body">
-                    <h3 class="mb-0">{{=sum(1 for acc in b2c_accounts if acc.traffic_light_status == 'YELLOW')}}</h3>
-                    <p class="mb-0">🟡 Yellow Status</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card bg-danger text-white">
-                <div class="card-body">
-                    <h3 class="mb-0">{{=sum(1 for acc in b2c_accounts if acc.traffic_light_status == 'RED')}}</h3>
-                    <p class="mb-0">🔴 Red Status</p>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Quick Actions -->
