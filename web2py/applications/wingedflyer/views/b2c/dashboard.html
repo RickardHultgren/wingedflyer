@@ -19,11 +19,11 @@
             </tr>
         </thead>
         <tbody>
-            {{for field in mfi._fields:}}
+            {{for field in borrower._fields:}}
             <tr>
                 <td><strong>{{=field}}</strong></td>
                 <td>
-                    {{=mfi[field] if mfi[field] is not None else ''}}
+                    {{=b2c[field] if b2c[field] is not None else ''}}
                 </td>
             </tr>
             {{pass}}
