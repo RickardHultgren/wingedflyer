@@ -2,81 +2,40 @@
 
 <div class="container mt-4">
     <div class="row mb-4">
-        <div class="col-md-8">
-            <h2>{{=borrower.real_name}}</h2>
-            <p class="text-muted">Username: {{=borrower.username}}</p>
+        <div class="col-md-10">
+            <h2>Edit B2C Borrower Account</h2>
+            <p class="text-muted">
+                Editing profile for <strong>{{=borrower.real_name}}</strong>
+            </p>
         </div>
-        <div class="col-md-4 text-right">
-            <a href="{{=URL('dashboard')}}" class="btn btn-secondary">← Back</a>
+        <div class="col-md-2 text-right">
+            <a href="{{=URL('b2c', args=[borrower.id])}}" class="btn btn-secondary">← Back</a>
         </div>
     </div>
 
-    <!-- Borrower Info Card -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Borrower Information</h5>
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">Borrower Profile Information</h5>
         </div>
+
         <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Address:</strong> {{=borrower.address or 'Not provided'}}</p>
-                    <p><strong>Telephone:</strong> {{=borrower.telephone or 'Not provided'}}</p>
-                    <p><strong>Email:</strong> {{=borrower.email or 'Not provided'}}</p>
-                    <p><strong>Social Media:</strong> {{=borrower.social_media or 'Not provided'}}</p>
-                </div>
+            {{if response.flash:}}
+            <div class="alert alert-danger">
+                {{=response.flash}}
             </div>
-            <div class="mt-2">
-                <a href="{{=URL('edit_b2c', args=[borrower.id])}}" class="btn btn-warning">Edit Profile</a>
+            {{pass}}
+
+            {{=form}}
+
+            <div class="alert alert-info mt-4">
+                <strong>Notes:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Changes apply immediately after saving</li>
+                    <li>Traffic light status is not editable here</li>
+                    <li>Username changes affect the borrower micro-page URL</li>
+                    <li>Password updates overwrite the existing password</li>
+                </ul>
             </div>
         </div>
     </div>
-
-    <!-- Financial Summary Card -->
-    <div class="card mb-4">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0">Financial Summary</h5>
-        </div>
-        <div class="card-body">
-            <div class="row text-center">
-                <div class="col-md-4">
-                    <h3>{{='%.2f' % (borrower.amount_borrowed or 0)}}</h3>
-                    <p class="text-muted">Amount Borrowed</p>
-                </div>
-                <div class="col-md-4">
-                    <h3>{{='%.2f' % (borrower.amount_repaid_b2c_reported or 0)}}</h3>
-                    <p class="text-muted">Amount Repaid</p>
-                </div>
-            <hr>
-        </div>
-    </div>
-<script>
-function copyToClipboard() {
-    var copyText = document.getElementById("microPageUrl");
-    copyText.select();
-    copyText.setSelectionRange(0, 99999);
-    document.execCommand("copy");
-    alert("URL copied to clipboard!");
-}
-</script>
-
-<style>
-    .card {
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .border-success {
-        border-width: 3px !important;
-    }
-    
-    .border-warning {
-        border-width: 3px !important;
-    }
-    
-    .border-danger {
-        border-width: 3px !important;
-    }
-    
-    .progress {
-        font-weight: bold;
-    }
-</style>
+</div>
