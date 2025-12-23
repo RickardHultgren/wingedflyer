@@ -35,32 +35,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card bg-success text-white">
-                <div class="card-body">
-                    <h3 class="mb-0">{{=sum(1 for acc in b2c_accounts if acc.traffic_light_status == 'GREEN')}}</h3>
-                    <p class="mb-0">🟢 Green Status</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card bg-warning text-white">
-                <div class="card-body">
-                    <h3 class="mb-0">{{=sum(1 for acc in b2c_accounts if acc.traffic_light_status == 'YELLOW')}}</h3>
-                    <p class="mb-0">🟡 Yellow Status</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card bg-danger text-white">
-                <div class="card-body">
-                    <h3 class="mb-0">{{=sum(1 for acc in b2c_accounts if acc.traffic_light_status == 'RED')}}</h3>
-                    <p class="mb-0">🔴 Red Status</p>
-                </div>
-            </div>
-        </div>
     </div>
-
     <!-- Quick Actions -->
     <div class="card mb-4">
         <div class="card-header bg-light">
@@ -121,15 +96,15 @@
                         </thead>
                         <tbody>
                             {{for acc in b2c_accounts:}}
-                            {{
-                            balance = acc.amount_borrowed - acc.amount_repaid_b2c_reported
-                            status_class = 'success' if acc.traffic_light_status == 'GREEN' else ('warning' if acc.traffic_light_status == 'YELLOW' else 'danger')
-                            status_emoji = '🟢' if acc.traffic_light_status == 'GREEN' else ('🟡' if acc.traffic_light_status == 'YELLOW' else '🔴')
+                            {{#
+                            #balance = acc.amount_borrowed - acc.amount_repaid_b2c_reported
+                            #status_class = 'success' if acc.traffic_light_status == 'GREEN' else ('warning' if acc.traffic_light_status == 'YELLOW' else 'danger')
+                            #status_emoji = '🟢' if acc.traffic_light_status == 'GREEN' else ('🟡' if acc.traffic_light_status == 'YELLOW' else '🔴')
                             }}
                             <tr>
                                 <td>
                                     <span class="badge bg-{{=status_class}}">
-                                        {{=status_emoji}} {{=acc.traffic_light_status or 'YELLOW'}}
+                                        {{#=status_emoji}} {{#=acc.traffic_light_status or 'YELLOW'}}
                                     </span>
                                 </td>
                                 <td>
@@ -173,42 +148,6 @@
                     </table>
                 </div>
             {{pass}}
-        </div>
-    </div>
-
-    <!-- Help Section -->
-    <div class="card mt-4 bg-light">
-        <div class="card-body">
-            <h6><i class="fas fa-info-circle"></i> Traffic Light System Guide</h6>
-            <div class="row">
-                <div class="col-md-4">
-                    <strong>🟢 GREEN (High Autonomy)</strong>
-                    <ul class="small mb-0">
-                        <li>Score: 6-7 points</li>
-                        <li>Grace period: 7 days</li>
-                        <li>Contact: Text message</li>
-                        <li>Meeting: Quarterly</li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <strong>🟡 YELLOW (Standard)</strong>
-                    <ul class="small mb-0">
-                        <li>Score: 4-5 points</li>
-                        <li>Grace period: 3 days</li>
-                        <li>Contact: Phone call</li>
-                        <li>Meeting: Monthly</li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <strong>🔴 RED (High Support)</strong>
-                    <ul class="small mb-0">
-                        <li>Score: 0-3 points</li>
-                        <li>Grace period: 1 day</li>
-                        <li>Contact: In-person visit</li>
-                        <li>Meeting: Weekly</li>
-                    </ul>
-                </div>
-            </div>
         </div>
     </div>
 </div>
