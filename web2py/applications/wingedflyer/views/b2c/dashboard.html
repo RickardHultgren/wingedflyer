@@ -11,7 +11,7 @@
             <a href="{{=URL('logout')}}" class="btn btn-secondary">Logout</a>
         </div>
     </div>
-
+    {{borrower}}
     <!-- Repayment Progress -->
     {{if borrower.amount_borrowed > 0:}}
     <div class="card mb-4">
@@ -45,7 +45,7 @@
 
     <!-- Action Cards Row -->
     <div class="row mb-4">
-        <div class="col-md-4">
+        <!-- div class="col-md-4">
             <div class="card h-100 border-primary">
                 <div class="card-body text-center">
                     <i class="fas fa-qrcode fa-3x text-primary mb-3"></i>
@@ -54,7 +54,7 @@
                     <a href="{{=URL('editor')}}" class="btn btn-primary">Manage Page</a>
                 </div>
             </div>
-        </div>
+        </div -->
         <div class="col-md-4">
             <div class="card h-100 border-success">
                 <div class="card-body text-center">
