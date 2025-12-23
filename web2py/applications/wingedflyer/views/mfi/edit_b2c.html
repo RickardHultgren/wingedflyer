@@ -7,9 +7,6 @@
             <p class="text-muted">Username: {{=borrower.username}}</p>
         </div>
         <div class="col-md-4 text-right">
-            <a href="{{=URL('recalculate_status', args=[borrower.id])}}" class="btn btn-outline-info btn-sm">
-                🔄 Recalculate Status
-            </a>
             <a href="{{=URL('dashboard')}}" class="btn btn-secondary">← Back</a>
         </div>
     </div>
