@@ -46,13 +46,6 @@
                     <h3>{{='%.2f' % (borrower.amount_repaid_b2c_reported or 0)}}</h3>
                     <p class="text-muted">Amount Repaid</p>
                 </div>
-                <div class="col-md-4">
-                    <h3 class="{{='text-danger' if balance > 0 else 'text-success'}}">
-                        {{='%.2f' % balance}}
-                    </h3>
-                    <p class="text-muted">Outstanding Balance</p>
-                </div>
-            </div>
             <hr>
             <h6>Update Financial Information</h6>
             {{=repay_form}}
