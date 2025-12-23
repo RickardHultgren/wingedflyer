@@ -11,7 +11,7 @@
             <a href="{{=URL('logout')}}" class="btn btn-secondary">Logout</a>
         </div>
     </div>
-    <table class="table table-sm table-bordered">
+    <table class="table table-bordered table-sm mt-3">
         <thead class="thead-light">
             <tr>
                 <th style="width: 30%;">Field</th>
@@ -19,14 +19,70 @@
             </tr>
         </thead>
         <tbody>
-            {{for field in borrower._fields:}}
             <tr>
-                <td><strong>{{=field}}</strong></td>
+                <td>Real Name</td>
+                <td>{{=borrower.real_name or ''}}</td>
+            </tr>
+            <tr>
+                <td>Username</td>
+                <td>{{=borrower.username}}</td>
+            </tr>
+            <tr>
+                <td>Address</td>
+                <td>{{=borrower.address or ''}}</td>
+            </tr>
+            <tr>
+                <td>Telephone</td>
+                <td>{{=borrower.telephone or ''}}</td>
+            </tr>
+            <tr>
+                <td>Email</td>
+                <td>{{=borrower.email or ''}}</td>
+            </tr>
+            <tr>
+                <td>Social Media</td>
+                <td>{{=borrower.social_media or ''}}</td>
+            </tr>
+
+            <tr class="table-secondary">
+                <td colspan="2"><strong>Financials</strong></td>
+            </tr>
+
+            <tr>
+                <td>Amount Borrowed</td>
+                <td>{{=borrower.amount_borrowed}}</td>
+            </tr>
+            <tr>
+                <td>Amount Repaid (B2C Reported)</td>
+                <td>{{=borrower.amount_repaid_b2c_reported}}</td>
+            </tr>
+            <tr>
+                <td>Outstanding Balance</td>
                 <td>
-                    {{=b2c[field] if b2c[field] is not None else ''}}
+                    {{=borrower.amount_borrowed - borrower.amount_repaid_b2c_reported}}
                 </td>
             </tr>
-            {{pass}}
+
+            <tr class="table-secondary">
+                <td colspan="2"><strong>Status & Metadata</strong></td>
+            </tr>
+
+            <tr>
+                <td>Last Status Update</td>
+                <td>{{=borrower.last_status_update}}</td>
+            </tr>
+            <tr>
+                <td>Status Notes</td>
+                <td>{{=borrower.status_notes or ''}}</td>
+            </tr>
+            <tr>
+                <td>Created On</td>
+                <td>{{=borrower.created_on}}</td>
+            </tr>
+            <tr>
+                <td>Last Updated</td>
+                <td>{{=borrower.updated_on}}</td>
+            </tr>
         </tbody>
     </table>
     <!-- Repayment Progress -->
