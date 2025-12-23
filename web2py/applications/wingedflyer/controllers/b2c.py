@@ -105,7 +105,7 @@ def dashboard():
     mfi = db.mfi(borrower.mfi_id)
 
     # Get traffic light protocol
-    protocol = get_borrower_protocol(session.b2c_id)
+    #protocol = get_borrower_protocol(session.b2c_id)
 
     # Calculate financial summary
     balance = borrower.amount_borrowed - borrower.amount_repaid_b2c_reported
@@ -119,8 +119,10 @@ def dashboard():
         limitby=(0, 5)
     )
 
+    
     # Get urgent message
-    urgent_msg = db(db.b2c_urgent_message.b2c_id == session.b2c_id).select().first()
+    #urgent_msg = db(db.b2c_urgent_message.b2c_id == session.b2c_id).select().first()
+    
 
     # Get recent payments (last 5)
     recent_payments = db(db.b2c_payment.b2c_id == session.b2c_id).select(
@@ -128,30 +130,32 @@ def dashboard():
         limitby=(0, 5)
     )
 
+    '''
     # Get micro-page stats
-    view_count = db(db.b2c_micro_page_view.b2c_id == session.b2c_id).count()
-    recent_views = db(db.b2c_micro_page_view.b2c_id == session.b2c_id).select(
-        orderby=~db.b2c_micro_page_view.viewed_on,
-        limitby=(0, 10)
-    )
+    #view_count = db(db.b2c_micro_page_view.b2c_id == session.b2c_id).count()
+    #recent_views = db(db.b2c_micro_page_view.b2c_id == session.b2c_id).select(
+    #    orderby=~db.b2c_micro_page_view.viewed_on,
+    #    limitby=(0, 10)
+    #)
 
     # Micro-page URL
-    micro_page_url = URL('mfi', 'micro', args=[borrower.username], scheme=True, host=True)
-    qr_url = URL('mfi', 'qr', vars=dict(data=micro_page_url), scheme=True, host=True)
+    #micro_page_url = URL('mfi', 'micro', args=[borrower.username], scheme=True, host=True)
+    #qr_url = URL('mfi', 'qr', vars=dict(data=micro_page_url), scheme=True, host=True)
+    '''
 
     return dict(
         borrower=borrower,
         mfi=mfi,
-        protocol=protocol,
+        #protocol=protocol,
         balance=balance,
         repayment_percentage=repayment_percentage,
         recent_timeline=recent_timeline,
-        recent_payments=recent_payments,
-        urgent_msg=urgent_msg,
-        view_count=view_count,
-        recent_views=recent_views,
-        micro_page_url=micro_page_url,
-        qr_url=qr_url
+        recent_payments=recent_payments#,
+        #urgent_msg=urgent_msg,
+        #view_count=view_count,
+        #recent_views=recent_views,
+        #micro_page_url=micro_page_url,
+        #qr_url=qr_url
     )
 
 
@@ -168,7 +172,7 @@ def my_status():
         redirect(URL('login'))
 
     mfi = db.mfi(borrower.mfi_id)
-    protocol = get_borrower_protocol(session.b2c_id)
+    #protocol = get_borrower_protocol(session.b2c_id)
 
     # Get detailed scoring breakdown
     status, score, breakdown = calculate_traffic_light_status(session.b2c_id)
@@ -200,20 +204,20 @@ def my_status():
 
     return dict(
         borrower=borrower,
-        mfi=mfi,
-        protocol=protocol,
-        score=score,
-        breakdown=breakdown,
-        recent_payments=recent_payments,
-        recent_comms=recent_comms,
-        on_time_count=on_time_count,
-        avg_days_late=avg_days_late,
-        mfi_initiated=mfi_initiated,
-        borrower_initiated=borrower_initiated,
-        proactive_count=proactive_count
+        mfi=mfi#,
+        #protocol=protocol#,
+        #score=score,
+        #breakdown=breakdown,
+        #recent_payments=recent_payments,
+        #recent_comms=recent_comms,
+        #on_time_count=on_time_count,
+        #avg_days_late=avg_days_late,
+        #mfi_initiated=mfi_initiated,
+        #borrower_initiated=borrower_initiated,
+        #proactive_count=proactive_count
     )
 
-
+'''
 # ---------------------------------------------------------------------
 # COMMUNICATE WITH MFI - Proactive communication
 # ---------------------------------------------------------------------
@@ -270,7 +274,7 @@ def communicate():
         redirect(URL('dashboard'))
 
     return dict(borrower=borrower, mfi=mfi, form=form)
-
+'''
 
 # ---------------------------------------------------------------------
 # REPORT PAYMENT - Let borrower log their own payments
@@ -507,7 +511,7 @@ def timeline():
 
     return dict(borrower=borrower, timeline_messages=timeline_messages)
 
-
+'''
 # ---------------------------------------------------------------------
 # MICRO-PAGE MANAGEMENT
 # ---------------------------------------------------------------------
@@ -654,7 +658,7 @@ def help():
     protocol = get_borrower_protocol(session.b2c_id)
 
     return dict(borrower=borrower, protocol=protocol)
-
+'''
 
 # ---------------------------------------------------------------------
 # INDEX
@@ -703,7 +707,7 @@ def save():
     print("=== SAVE FUNCTION CALLED ===")
     print("request.vars:", request.vars)
     print("request.post_vars:", request.post_vars)
-    
+
     borrower = db.b2c(session.b2c_id)
     if not borrower:
         print("ERROR: No borrower found")
@@ -714,7 +718,7 @@ def save():
     flyer_id = request.vars.id
     title = (request.vars.title or '').strip()
     content_from_form = (request.vars.thecontent or '').strip()
-    
+
     print("flyer_id:", flyer_id)
     print("title:", title)
     print("content length:", len(content_from_form))
@@ -724,7 +728,7 @@ def save():
         print("ERROR: No title provided")
         session.flash = "Title is required"
         redirect(URL('editor', args=[flyer_id] if flyer_id else []))
-    
+
     if not content_from_form:
         print("ERROR: No content provided")
         session.flash = "Content is required"
@@ -899,4 +903,3 @@ def delete():
         session.flash = "Flyer deleted successfully"
 
     redirect(URL('editor'))
-

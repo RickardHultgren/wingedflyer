@@ -1,47 +1,216 @@
 {{extend 'layout.html'}}
 
-<div class="container">
-    <div class="row">
-        <div class="col-md-10 col-md-offset-1">
-            <h2>{{=T("Edit B2C Account")}}</h2>
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>{{=borrower.real_name}}</h2>
+            <p class="text-muted">Username: {{=borrower.username}}</p>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{{=URL('recalculate_status', args=[borrower.id])}}" class="btn btn-outline-info btn-sm">
+                🔄 Recalculate Status
+            </a>
+            <a href="{{=URL('dashboard')}}" class="btn btn-secondary">← Back</a>
+        </div>
+    </div>
+
+    <!-- Borrower Info Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Borrower Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Address:</strong> {{=borrower.address or 'Not provided'}}</p>
+                    <p><strong>Telephone:</strong> {{=borrower.telephone or 'Not provided'}}</p>
+                    <p><strong>Email:</strong> {{=borrower.email or 'Not provided'}}</p>
+                    <p><strong>Social Media:</strong> {{=borrower.social_media or 'Not provided'}}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Location:</strong> 
+                        {{if borrower.location_lat and borrower.location_lng:}}
+                            {{='%.6f, %.6f' % (borrower.location_lat, borrower.location_lng)}}
+                        {{else:}}
+                            Not set
+                        {{pass}}
+                    </p>
+                    <p><strong>Working Today:</strong> 
+                        {{if borrower.started_working_today:}}
+                            <span class="badge badge-success">Yes</span>
+                        {{else:}}
+                            <span class="badge badge-secondary">No</span>
+                        {{pass}}
+                    </p>
+                    <p><strong>Created:</strong> {{=borrower.created_on.strftime('%Y-%m-%d %H:%M')}}</p>
+                </div>
+            </div>
+            <div class="mt-2">
+                <a href="{{=URL('edit_b2c', args=[borrower.id])}}" class="btn btn-warning">Edit Profile</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Summary Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Financial Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <h3>{{='%.2f' % (borrower.amount_borrowed or 0)}}</h3>
+                    <p class="text-muted">Amount Borrowed</p>
+                </div>
+                <div class="col-md-4">
+                    <h3>{{='%.2f' % (borrower.amount_repaid_b2c_reported or 0)}}</h3>
+                    <p class="text-muted">Amount Repaid</p>
+                </div>
+                <div class="col-md-4">
+                    <h3 class="{{='text-danger' if balance > 0 else 'text-success'}}">
+                        {{='%.2f' % balance}}
+                    </h3>
+                    <p class="text-muted">Outstanding Balance</p>
+                </div>
+            </div>
+            <hr>
+            <h6>Update Financial Information</h6>
+            {{=repay_form}}
+        </div>
+    </div>
+
+    <!-- Payment Tracking Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">📊 Payment Tracking</h5>
+        </div>
+        <div class="card-body">
+            <h6>Record New Payment</h6>
+            {{=payment_form}}
             
-            <ol class="breadcrumb">
-                <li><a href="{{=URL('index')}}">{{=T("Dashboard")}}</a></li>
-                <li><a href="{{=URL('view_b2c', args=[b2c.id])}}">{{=b2c.real_name}}</a></li>
-                <li class="active">{{=T("Edit")}}</li>
-            </ol>
-
-            <div class="panel panel-warning">
-                <div class="panel-heading">
-                    <h3 class="panel-title">{{=T("Edit B2C Account: %s") % b2c.real_name}}</h3>
+            <hr>
+            
+            <h6>Recent Payments</h6>
+            {{if payments:}}
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Paid Date</th>
+                                <th>Days Late</th>
+                                <th>Method</th>
+                                <th>Notes</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{for payment in payments:}}
+                            <tr>
+                                <td>{{='%.2f' % payment.amount}}</td>
+                                <td>{{=payment.due_date.strftime('%Y-%m-%d')}}</td>
+                                <td>{{=payment.paid_date.strftime('%Y-%m-%d') if payment.paid_date else 'Not paid'}}</td>
+                                <td>
+                                    {{if payment.days_late is not None:}}
+                                        <span class="badge {{='badge-success' if payment.days_late <= 0 else ('badge-warning' if payment.days_late <= 3 else 'badge-danger')}}">
+                                            {{if payment.days_late < 0:}}
+                                                {{=payment.days_late}} (early)
+                                            {{elif payment.days_late == 0:}}
+                                                On time
+                                            {{else:}}
+                                                +{{=payment.days_late}}
+                                            {{pass}}
+                                        </span>
+                                    {{else:}}
+                                        -
+                                    {{pass}}
+                                </td>
+                                <td>{{=payment.payment_method or '-'}}</td>
+                                <td><small>{{=payment.notes[:50] + '...' if payment.notes and len(payment.notes) > 50 else (payment.notes or '-')}}</small></td>
+                                <td>
+                                    <a href="{{=URL('delete_payment', args=[payment.id])}}" 
+                                       class="btn btn-sm btn-danger"
+                                       onclick="return confirm('Delete this payment?');">
+                                        ✕
+                                    </a>
+                                </td>
+                            </tr>
+                            {{pass}}
+                        </tbody>
+                    </table>
                 </div>
-                <div class="panel-body">
-                    <div class="alert alert-warning">
-                        <h4>{{=T("Important Notes:")}}</h4>
-                        <ul>
-                            <li>{{=T("Changing the username will change the public micropage URL")}}</li>
-                            <li>{{=T("If you enter a new password, it will be hashed automatically")}}</li>
-                            <li>{{=T("Leave password blank to keep the current password")}}</li>
-                            <li>{{=T("Check 'Check to delete' at the bottom to permanently delete this account")}}</li>
-                        </ul>
+            {{else:}}
+                <p class="text-muted">No payment records yet.</p>
+            {{pass}}
+        </div>
+    </div>
+
+    <!-- Timeline Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">📅 Timeline Messages</h5>
+        </div>
+        <div class="card-body">
+            <h6>Add New Timeline Message</h6>
+            {{=timeline_form}}
+            
+            <hr>
+            
+            <h6>Existing Timeline Messages</h6>
+            {{if timeline:}}
+                <div class="list-group mt-3">
+                    {{for msg in timeline:}}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{=msg.title}}</h6>
+                            <small>{{=msg.the_date.strftime('%Y-%m-%d')}}</small>
+                        </div>
+                        <p class="mb-1">{{=msg.the_message or ''}}</p>
+                        <small class="text-muted">Created: {{=msg.created_on.strftime('%Y-%m-%d %H:%M')}}</small>
+                        <a href="{{=URL('delete_timeline', args=[msg.id])}}" 
+                           class="btn btn-sm btn-danger float-right"
+                           onclick="return confirm('Delete this timeline message?');">
+                            Delete
+                        </a>
                     </div>
-
-                    {{=form}}
+                    {{pass}}
                 </div>
-            </div>
-
-            <div class="my-3">
-                <a href="{{=URL('view_b2c', args=[b2c.id])}}" class="btn btn-default">
-                    <i class="glyphicon glyphicon-arrow-left"></i> {{=T("Cancel")}}
-                </a>
-            </div>
+            {{else:}}
+                <p class="text-muted">No timeline messages yet.</p>
+            {{pass}}
         </div>
     </div>
 </div>
 
-<style>
-.my-3 {
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+<script>
+function copyToClipboard() {
+    var copyText = document.getElementById("microPageUrl");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    alert("URL copied to clipboard!");
 }
+</script>
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .border-success {
+        border-width: 3px !important;
+    }
+    
+    .border-warning {
+        border-width: 3px !important;
+    }
+    
+    .border-danger {
+        border-width: 3px !important;
+    }
+    
+    .progress {
+        font-weight: bold;
+    }
 </style>

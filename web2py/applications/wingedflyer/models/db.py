@@ -109,18 +109,18 @@ db.define_table(
     Field('amount_borrowed', 'double', default=0),
     Field('amount_repaid_b2c_reported', 'double', default=0),
 
-    Field('location_lat', 'double'),
-    Field('location_lng', 'double'),
-    Field('started_working_today', 'boolean', default=False),
+    #Field('location_lat', 'double'),
+    #Field('location_lng', 'double'),
+    #Field('started_working_today', 'boolean', default=False),
 
-    Field('qr_code_url', 'string'),
-    Field('micro_page_text', 'text', default=""),
+    #Field('qr_code_url', 'string'),
+    #Field('micro_page_text', 'text', default=""),
 
     # Traffic Light System Fields
-    Field('traffic_light_status', 'string', default='YELLOW',
-          comment='GREEN, YELLOW, or RED based on visibility'),
-    Field('visibility_score', 'integer', default=0,
-          comment='0-7 points: Payment(0-3) + Communication(0-2) + Proactivity(0-2)'),
+    #Field('traffic_light_status', 'string', default='YELLOW',
+    #      comment='GREEN, YELLOW, or RED based on visibility'),
+    #Field('visibility_score', 'integer', default=0,
+    #      comment='0-7 points: Payment(0-3) + Communication(0-2) + Proactivity(0-2)'),
     Field('last_status_update', 'datetime', default=request.now),
     Field('status_notes', 'text',
           comment='Internal notes about status changes'),
@@ -133,7 +133,7 @@ db.define_table(
 db.b2c.username.requires  = [IS_NOT_EMPTY(), IS_NOT_IN_DB(db, 'b2c.username')]
 db.b2c.real_name.requires = IS_NOT_EMPTY()
 db.b2c.email.requires = IS_EMPTY_OR(IS_EMAIL())
-db.b2c.traffic_light_status.requires = IS_IN_SET(['GREEN', 'YELLOW', 'RED'])
+#db.b2c.traffic_light_status.requires = IS_IN_SET(['GREEN', 'YELLOW', 'RED'])
 
 # Field labels
 db.b2c.mfi_id.label = 'MFI'
@@ -146,13 +146,13 @@ db.b2c.email.label = 'Email'
 db.b2c.social_media.label = 'Social Media'
 db.b2c.amount_borrowed.label = 'Amount Borrowed'
 db.b2c.amount_repaid_b2c_reported.label = 'Amount Repaid (B2C Reported)'
-db.b2c.location_lat.label = 'Latitude'
-db.b2c.location_lng.label = 'Longitude'
-db.b2c.started_working_today.label = 'Started Working Today'
-db.b2c.qr_code_url.label = 'QR Code URL'
-db.b2c.micro_page_text.label = 'Micro Page Text'
-db.b2c.traffic_light_status.label = 'Traffic Light Status'
-db.b2c.visibility_score.label = 'Visibility Score (0-7)'
+#db.b2c.location_lat.label = 'Latitude'
+#db.b2c.location_lng.label = 'Longitude'
+#db.b2c.started_working_today.label = 'Started Working Today'
+#db.b2c.qr_code_url.label = 'QR Code URL'
+#db.b2c.micro_page_text.label = 'Micro Page Text'
+#db.b2c.traffic_light_status.label = 'Traffic Light Status'
+#db.b2c.visibility_score.label = 'Visibility Score (0-7)'
 db.b2c.last_status_update.label = 'Last Status Update'
 db.b2c.status_notes.label = 'Status Notes'
 
@@ -290,7 +290,7 @@ db.b2c_timeline_message.title.label = 'Title'
 db.b2c_timeline_message.the_message.label = 'Message'
 db.b2c_timeline_message.the_date.label = 'Date'
 
-
+'''
 ############################################################
 # 6. URGENT MESSAGE (single entry per b2c)
 ############################################################
@@ -532,7 +532,7 @@ def get_borrower_protocol(b2c_id):
     
     return protocols.get(borrower.traffic_light_status, protocols['YELLOW'])
 
-
+'''
 ############################################################
 # 8. FLYER TABLES (Replace this section in db.py)
 ############################################################

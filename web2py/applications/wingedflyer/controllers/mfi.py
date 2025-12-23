@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-WingedFlyer MFI Portal Controller (refined and debugged)
+WingedFlyer MFI Portal Controller with Traffic Light System
 """
 
 import bcrypt
+from datetime import datetime, timedelta
 
 
 # ---------------------------------------------------------------------
@@ -31,15 +32,14 @@ def login():
     if form.accepts(request, session):
         username = form.vars.username
         password = form.vars.password
-        
+
         user = db(db.mfi.username == username).select().first()
 
         if user and user.password_hash:
             try:
-                # Ensure both are bytes for comparison
                 password_bytes = password.encode('utf-8')
                 hash_bytes = user.password_hash.encode('utf-8') if isinstance(user.password_hash, str) else user.password_hash
-                
+
                 if bcrypt.checkpw(password_bytes, hash_bytes):
                     session.mfi_id = user.id
                     session.mfi_name = user.name
@@ -49,7 +49,7 @@ def login():
                     response.flash = "Invalid username or password"
             except Exception as e:
                 response.flash = "Login error. Please contact administrator."
-                print("Login error: %s" % str(e))  # Log for debugging
+                print("Login error: %s" % str(e))
             redirect(URL(args=request.args, vars=request.vars))
         else:
             response.flash = "Invalid username or password"
@@ -80,30 +80,41 @@ def mfi_requires_login(func):
 
 
 # ---------------------------------------------------------------------
-# MFI DASHBOARD – LIST ALL B2C ACCOUNTS
+# MFI DASHBOARD – LIST ALL B2C ACCOUNTS WITH TRAFFIC LIGHT STATUS
 # ---------------------------------------------------------------------
 @mfi_requires_login
 def dashboard():
-    """Landing page for MFI users - shows all their B2C accounts"""
+    """Landing page for MFI users - shows all their B2C accounts with traffic light status"""
     mfi_record = db.mfi(session.mfi_id)
-    
+
     if not mfi_record:
         session.clear()
         redirect(URL('login'))
-    
+
     b2c_accounts = db(db.b2c.mfi_id == session.mfi_id).select(
         orderby=db.b2c.real_name
     )
-    
+    '''
     # Calculate statistics
     current_count = len(b2c_accounts)
     max_accounts = mfi_record.b2c_accounts
-    
+
+    # Count by traffic light status
+    status_counts = {
+        'GREEN': 0,
+        'YELLOW': 0,
+        'RED': 0
+    }
+    for acc in b2c_accounts:
+        status = acc.traffic_light_status or 'YELLOW'
+        status_counts[status] = status_counts.get(status, 0) + 1
+    '''
     return dict(
         b2c_accounts=b2c_accounts,
-        mfi=session.mfi_name,
-        current_count=current_count,
-        max_accounts=max_accounts
+        mfi=session.mfi_name#,
+        #current_count=current_count,
+        #max_accounts=max_accounts#,
+        #status_counts=status_counts
     )
 
 
@@ -115,59 +126,136 @@ def create_b2c():
     """Create a new B2C borrower account"""
     mfi_record = db.mfi(session.mfi_id)
     current_count = db(db.b2c.mfi_id == session.mfi_id).count()
-    
+
     if current_count >= mfi_record.b2c_accounts:
         session.flash = "You have reached your maximum B2C account limit (%d)" % mfi_record.b2c_accounts
         redirect(URL('dashboard'))
 
-    # Set field attributes before creating the form
     db.b2c.mfi_id.writable = False
     db.b2c.mfi_id.readable = False
 
+    # Hide traffic light fields from creation form
+    #db.b2c.traffic_light_status.writable = False
+    #db.b2c.traffic_light_status.readable = False
+    #db.b2c.visibility_score.writable = False
+    #db.b2c.visibility_score.readable = False
+    db.b2c.last_status_update.writable = False
+    db.b2c.last_status_update.readable = False
+    #db.b2c.status_notes.writable = False
+    #db.b2c.status_notes.readable = False
+
     form = SQLFORM(db.b2c)
     form.vars.mfi_id = session.mfi_id
-    
+
     if form.process().accepted:
         session.flash = "B2C account created successfully"
         redirect(URL('b2c', args=[form.vars.id]))
     elif form.errors:
         response.flash = "Please correct the errors in the form"
-    
+
     return dict(form=form, current_count=current_count, max_accounts=mfi_record.b2c_accounts)
 
 
 # ---------------------------------------------------------------------
-# VIEW / MANAGE A SINGLE B2C ACCOUNT
+# VIEW / MANAGE A SINGLE B2C ACCOUNT WITH TRAFFIC LIGHT
 # ---------------------------------------------------------------------
 @mfi_requires_login
 def b2c():
     """
     View & manage a single b2c borrower:
-        - Basic info
+        - Basic info with traffic light status
+        - Payment tracking
+        - Communication log
         - Repayments tracking
         - Timeline messages
         - Urgent message
         - Micro-page link and QR code
     """
     b2c_id = request.args(0, cast=int)
-    
+
     if not b2c_id:
         session.flash = "Invalid B2C account"
         redirect(URL('dashboard'))
-    
+
     borrower = db.b2c(b2c_id)
 
     if not borrower or borrower.mfi_id != session.mfi_id:
         session.flash = "Unauthorized access"
         redirect(URL('dashboard'))
 
+    # Get traffic light protocol
+    #protocol = get_borrower_protocol(b2c_id)
+
+    # Get recent payments (last 10)
+    payments = db(db.b2c_payment.b2c_id == b2c_id).select(
+        orderby=~db.b2c_payment.due_date,
+        limitby=(0, 10)
+    )
+
+    # Get recent communications (last 10)
+    communications = db(db.b2c_communication.b2c_id == b2c_id).select(
+        orderby=~db.b2c_communication.communication_date,
+        limitby=(0, 10)
+    )
+
     # Get timeline messages
     timeline = db(db.b2c_timeline_message.b2c_id == b2c_id).select(
         orderby=~db.b2c_timeline_message.the_date
     )
-    
+
     # Get current urgent message
-    current_urgent = db(db.b2c_urgent_message.b2c_id == b2c_id).select().first()
+    #current_urgent = db(db.b2c_urgent_message.b2c_id == b2c_id).select().first()
+
+    # Payment form
+    payment_form = SQLFORM.factory(
+        Field('amount', 'double', label="Payment Amount", requires=IS_NOT_EMPTY()),
+        Field('due_date', 'date', label="Due Date", requires=IS_NOT_EMPTY()),
+        Field('paid_date', 'date', label="Paid Date", default=request.now.date()),
+        Field('payment_method', 'string', label="Payment Method"),
+        Field('notes', 'text', label="Notes"),
+        submit_button="Record Payment"
+    )
+
+    if payment_form.process(formname='payment').accepted:
+        db.b2c_payment.insert(
+            b2c_id=b2c_id,
+            amount=payment_form.vars.amount,
+            due_date=payment_form.vars.due_date,
+            paid_date=payment_form.vars.paid_date,
+            payment_method=payment_form.vars.payment_method,
+            notes=payment_form.vars.notes
+        )
+        # Update traffic light status
+        #update_borrower_traffic_light(b2c_id, notes="Payment recorded")
+        #session.flash = "Payment recorded and status updated"
+        redirect(URL('b2c', args=[b2c_id]))
+
+    # Communication form
+    comm_form = SQLFORM.factory(
+        Field('initiated_by', 'string', label="Initiated By",
+              requires=IS_IN_SET(['MFI', 'BORROWER']), default='MFI'),
+        Field('communication_type', 'string', label="Type",
+              requires=IS_IN_SET(['CALL', 'TEXT', 'VISIT', 'EMAIL', 'PROACTIVE_WARNING'])),
+        Field('response_time_hours', 'integer', label="Response Time (hours)",
+              comment="Only for MFI-initiated contacts"),
+        Field('is_proactive', 'boolean', label="Proactive Warning?", default=False),
+        Field('message_summary', 'text', label="Summary"),
+        submit_button="Log Communication"
+    )
+
+    if comm_form.process(formname='communication').accepted:
+        db.b2c_communication.insert(
+            b2c_id=b2c_id,
+            initiated_by=comm_form.vars.initiated_by,
+            communication_type=comm_form.vars.communication_type,
+            response_time_hours=comm_form.vars.response_time_hours,
+            is_proactive=comm_form.vars.is_proactive,
+            message_summary=comm_form.vars.message_summary
+        )
+        # Update traffic light status
+        update_borrower_traffic_light(b2c_id, notes="Communication logged")
+        session.flash = "Communication logged and status updated"
+        redirect(URL('b2c', args=[b2c_id]))
 
     # Timeline message form
     timeline_form = SQLFORM.factory(
@@ -176,7 +264,7 @@ def b2c():
         Field('date', 'datetime', label="Date", default=request.now),
         submit_button="Add Timeline Message"
     )
-    
+
     if timeline_form.process(formname='timeline').accepted:
         db.b2c_timeline_message.insert(
             b2c_id=b2c_id,
@@ -186,14 +274,14 @@ def b2c():
         )
         session.flash = "Timeline message added"
         redirect(URL('b2c', args=[b2c_id]))
-
+    '''
     # Urgent message form
     urgent_form = SQLFORM.factory(
-        Field('urgent_text', 'text', label="Urgent Message", 
+        Field('urgent_text', 'text', label="Urgent Message",
               default=current_urgent.the_message if current_urgent else ""),
         submit_button="Update Urgent Message"
     )
-    
+
     if urgent_form.process(formname='urgent').accepted:
         db.b2c_urgent_message.update_or_insert(
             (db.b2c_urgent_message.b2c_id == b2c_id),
@@ -202,7 +290,7 @@ def b2c():
         )
         session.flash = "Urgent message updated"
         redirect(URL('b2c', args=[b2c_id]))
-
+    '''
     # Repayment tracking form
     repay_form = SQLFORM.factory(
         Field('amount_borrowed', 'double', label="Amount Borrowed",
@@ -211,7 +299,7 @@ def b2c():
               default=borrower.amount_repaid_b2c_reported, requires=IS_FLOAT_IN_RANGE(0, 1e10)),
         submit_button="Update Amounts"
     )
-    
+
     if repay_form.process(formname='repay').accepted:
         borrower.update_record(
             amount_borrowed=repay_form.vars.amount_borrowed,
@@ -223,20 +311,111 @@ def b2c():
     # Micro-page URL and QR code
     micro_page_url = URL('micro', args=[borrower.username], scheme=True, host=True)
     qr_url = URL('qr', vars=dict(data=micro_page_url), scheme=True, host=True)
-    
+
     # Calculate remaining balance
     balance = borrower.amount_borrowed - borrower.amount_repaid_b2c_reported
 
     return dict(
         borrower=borrower,
+        #protocol=protocol,
+        payments=payments,
+        #communications=communications,
         timeline=timeline,
+        payment_form=payment_form,
+        #comm_form=comm_form,
         timeline_form=timeline_form,
-        urgent_form=urgent_form,
+        #urgent_form=urgent_form,
         repay_form=repay_form,
-        micro_page_url=micro_page_url,
-        qr_url=qr_url,
+        #micro_page_url=micro_page_url,
+        #qr_url=qr_url,
         balance=balance
     )
+
+
+# ---------------------------------------------------------------------
+# RECALCULATE TRAFFIC LIGHT STATUS
+# ---------------------------------------------------------------------
+@mfi_requires_login
+def recalculate_status():
+    """Manually recalculate traffic light status for a borrower"""
+    b2c_id = request.args(0, cast=int)
+
+    if not b2c_id:
+        session.flash = "Invalid B2C account"
+        redirect(URL('dashboard'))
+
+    borrower = db.b2c(b2c_id)
+
+    if not borrower or borrower.mfi_id != session.mfi_id:
+        session.flash = "Unauthorized access"
+        redirect(URL('dashboard'))
+
+    success, status, score = update_borrower_traffic_light(b2c_id, notes="Manual recalculation")
+
+    if success:
+        session.flash = "Status updated to %s (Score: %d/7)" % (status, score)
+    else:
+        session.flash = "Error updating status"
+
+    redirect(URL('b2c', args=[b2c_id]))
+
+'''
+# ---------------------------------------------------------------------
+# TRAFFIC LIGHT REPORT - VIEW ALL BORROWERS BY STATUS
+# ---------------------------------------------------------------------
+@mfi_requires_login
+def traffic_light_report():
+    """View all borrowers organized by traffic light status"""
+
+    # Get filter from URL
+    filter_status = request.vars.status or 'ALL'
+
+    # Build query
+    query = (db.b2c.mfi_id == session.mfi_id)
+    if filter_status in ['GREEN', 'YELLOW', 'RED']:
+        query &= (db.b2c.traffic_light_status == filter_status)
+
+    borrowers = db(query).select(orderby=db.b2c.traffic_light_status|db.b2c.real_name)
+
+    # Calculate statistics
+    stats = {
+        'total': db(db.b2c.mfi_id == session.mfi_id).count(),
+        'GREEN': db((db.b2c.mfi_id == session.mfi_id) &
+                    (db.b2c.traffic_light_status == 'GREEN')).count(),
+        'YELLOW': db((db.b2c.mfi_id == session.mfi_id) &
+                     (db.b2c.traffic_light_status == 'YELLOW')).count(),
+        'RED': db((db.b2c.mfi_id == session.mfi_id) &
+                  (db.b2c.traffic_light_status == 'RED')).count()
+    }
+
+    return dict(
+        borrowers=borrowers,
+        filter_status=filter_status,
+        stats=stats
+    )
+
+'''
+
+# ---------------------------------------------------------------------
+# BULK STATUS UPDATE - RECALCULATE ALL BORROWERS
+# ---------------------------------------------------------------------
+@mfi_requires_login
+def bulk_recalculate():
+    """Recalculate traffic light status for all borrowers in this MFI"""
+
+    borrowers = db(db.b2c.mfi_id == session.mfi_id).select()
+
+    updated_count = 0
+    for borrower in borrowers:
+        success, status, score = update_borrower_traffic_light(
+            borrower.id,
+            notes="Bulk recalculation"
+        )
+        if success:
+            updated_count += 1
+
+    session.flash = "Updated %d borrower statuses" % updated_count
+    redirect(URL('traffic_light_report'))
 
 
 # ---------------------------------------------------------------------
@@ -246,30 +425,83 @@ def b2c():
 def edit_b2c():
     """Edit B2C borrower profile information"""
     b2c_id = request.args(0, cast=int)
-    
+
     if not b2c_id:
         session.flash = "Invalid B2C account"
         redirect(URL('dashboard'))
-    
+
     borrower = db.b2c(b2c_id)
-    
+
     if not borrower or borrower.mfi_id != session.mfi_id:
         session.flash = "Unauthorized access"
         redirect(URL('dashboard'))
-    
-    form = SQLFORM(db.b2c, borrower, 
-                   fields=['real_name', 'username', 'password_hash', 'address', 
-                          'telephone', 'email', 'social_media', 'micro_page_text',
-                          'location_lat', 'location_lng', 'started_working_today'])
-    
+
+    # Hide traffic light fields from edit form
+    #db.b2c.traffic_light_status.writable = False
+    #db.b2c.traffic_light_status.readable = True
+    #db.b2c.visibility_score.writable = False
+    #db.b2c.visibility_score.readable = True
+
+    form = SQLFORM(db.b2c, borrower,
+                   fields=['real_name', 'username', 'password_hash', 'address',
+                          'telephone', 'email', 'social_media'])
+
     if form.process().accepted:
         session.flash = "B2C profile updated"
         redirect(URL('b2c', args=[b2c_id]))
     elif form.errors:
         response.flash = "Please correct the errors"
-    
+
     return dict(form=form, borrower=borrower)
 
+
+# ---------------------------------------------------------------------
+# DELETE PAYMENT
+# ---------------------------------------------------------------------
+@mfi_requires_login
+def delete_payment():
+    """Delete a payment record"""
+    payment_id = request.args(0, cast=int)
+
+    if payment_id:
+        payment = db.b2c_payment(payment_id)
+        if payment:
+            borrower = db.b2c(payment.b2c_id)
+            if borrower and borrower.mfi_id == session.mfi_id:
+                b2c_id = payment.b2c_id
+                db(db.b2c_payment.id == payment_id).delete()
+                # Update traffic light status
+                update_borrower_traffic_light(b2c_id, notes="Payment deleted")
+                session.flash = "Payment deleted and status updated"
+                redirect(URL('b2c', args=[b2c_id]))
+
+    session.flash = "Invalid request"
+    redirect(URL('dashboard'))
+
+'''
+# ---------------------------------------------------------------------
+# DELETE COMMUNICATION
+# ---------------------------------------------------------------------
+@mfi_requires_login
+def delete_communication():
+    """Delete a communication record"""
+    comm_id = request.args(0, cast=int)
+
+    if comm_id:
+        comm = db.b2c_communication(comm_id)
+        if comm:
+            borrower = db.b2c(comm.b2c_id)
+            if borrower and borrower.mfi_id == session.mfi_id:
+                b2c_id = comm.b2c_id
+                db(db.b2c_communication.id == comm_id).delete()
+                # Update traffic light status
+                update_borrower_traffic_light(b2c_id, notes="Communication deleted")
+                session.flash = "Communication deleted and status updated"
+                redirect(URL('b2c', args=[b2c_id]))
+
+    session.flash = "Invalid request"
+    redirect(URL('dashboard'))
+'''
 
 # ---------------------------------------------------------------------
 # DELETE TIMELINE MESSAGE
@@ -278,7 +510,7 @@ def edit_b2c():
 def delete_timeline():
     """Delete a timeline message"""
     msg_id = request.args(0, cast=int)
-    
+
     if msg_id:
         msg = db.b2c_timeline_message(msg_id)
         if msg:
@@ -288,41 +520,41 @@ def delete_timeline():
                 db(db.b2c_timeline_message.id == msg_id).delete()
                 session.flash = "Timeline message deleted"
                 redirect(URL('b2c', args=[b2c_id]))
-    
+
     session.flash = "Invalid request"
     redirect(URL('dashboard'))
 
-
+'''
 # ---------------------------------------------------------------------
 # PUBLIC MICRO PAGE (no login required)
 # ---------------------------------------------------------------------
 def micro():
     """Public-facing micro-page for a B2C borrower"""
     username = request.args(0)
-    
+
     if not username:
         return "Borrower not found"
-    
+
     borrower = db(db.b2c.username == username).select().first()
 
     if not borrower:
         return "Borrower not found"
-    
+
     # Log the view
     db.b2c_micro_page_view.insert(
         b2c_id=borrower.id,
         viewer_ip=request.client
     )
-    
+
     # Get timeline and urgent message
     timeline = db(db.b2c_timeline_message.b2c_id == borrower.id).select(
         orderby=~db.b2c_timeline_message.the_date
     )
     urgent_msg = db(db.b2c_urgent_message.b2c_id == borrower.id).select().first()
-    
+
     # Calculate balance
     balance = borrower.amount_borrowed - borrower.amount_repaid_b2c_reported
-    
+
     return dict(
         borrower=borrower,
         timeline=timeline,
@@ -343,7 +575,7 @@ def qr():
         import cStringIO as BytesIO
 
     data = request.vars.data or "https://wingedflyer.com"
-    
+
     buf = BytesIO()
     img = qrcode.make(data)
     img.save(buf, 'PNG')
@@ -351,5 +583,6 @@ def qr():
 
     response.headers['Content-Type'] = 'image/png'
     response.headers['Cache-Control'] = 'max-age=3600'
-    
+
     return buf.read()
+'''
