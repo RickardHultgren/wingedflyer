@@ -1,7 +1,7 @@
 {{extend 'layout.html'}}
 
 <div class="container mt-4">
-    <!-- Header Section -->
+    <!-- Header -->
     <div class="row mb-4">
         <div class="col-md-8">
             <h2>MFI Dashboard</h2>
@@ -21,20 +21,44 @@
     {{if session.flash:}}
     <div class="alert alert-info alert-dismissible fade show" role="alert">
         {{=session.flash}}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     {{pass}}
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stat-card bg-primary text-white">
-                <div class="card-body">
-                    <h3 class="mb-0">{{=len(b2c_accounts)}}</h3>
-                    <p class="mb-0">Total Borrowers</p>
+    <!-- Quick Actions -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Quick Actions</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <a href="{{=URL('signals_overview')}}" class="btn btn-outline-primary btn-block w-100">
+                        <i class="fas fa-signal"></i> View All Signals
+                    </a>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <a href="{{=URL('offer_responses')}}" class="btn btn-outline-info btn-block w-100">
+                        <i class="fas fa-handshake"></i> View Offer Responses
+                    </a>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <a href="{{=URL('create_b2c')}}" class="btn btn-outline-success btn-block w-100">
+                        <i class="fas fa-user-plus"></i> Add New Borrower
+                    </a>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Design Principle Reminder -->
+    <div class="alert alert-warning mb-4">
+        <h6><i class="fas fa-info-circle"></i> Autonomy-Respecting Design Principles</h6>
+        <p class="mb-0 small">
+            <strong>Remember:</strong> Borrower signals are for coordination, not judgment. 
+            When you see signals that suggest problems, create <strong>support offers</strong> that borrowers can accept, decline, or modify. 
+            Never act unilaterally on borrower data.
+        </p>
     </div>
 
     <!-- Borrowers List -->
@@ -43,7 +67,7 @@
             <h5 class="mb-0">All Borrowers</h5>
         </div>
         <div class="card-body">
-            {{if len(b2c_accounts) == 0:}}
+            {{if len(borrower_data) == 0:}}
                 <div class="text-center py-5">
                     <i class="fas fa-users fa-3x text-muted mb-3"></i>
                     <h5>No Borrowers Yet</h5>
@@ -57,43 +81,76 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Status</th>
                                 <th>Name</th>
                                 <th>Username</th>
                                 <th>Contact</th>
-                                <!-- th>Score</th-->
                                 <th>Amount Borrowed</th>
                                 <th>Amount Repaid</th>
-                                <!--th>Balance</th-->
+                                <th>Balance</th>
+                                <th>Recent Signals</th>
+                                <th>Pending Offers</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {{for acc in b2c_accounts:}}
-                            <tr>
+                            {{for data in borrower_data:}}
+                            {{
+                            b = data['borrower']
+                            balance = b.amount_borrowed - b.amount_repaid_b2c_reported
+                            }}
+                            <tr class="{{='table-warning' if data['needs_attention'] else ''}}">
                                 <td>
-                                    <strong>{{=acc.real_name}}</strong>
+                                    <strong>{{=b.real_name}}</strong>
+                                    {{if data['needs_attention']:}}
+                                        <span class="badge bg-warning text-dark">Attention</span>
+                                    {{pass}}
                                 </td>
-                                <td>{{=acc.username}}</td>
+                                <td>{{=b.username}}</td>
                                 <td>
-                                    {{if acc.telephone:}}
-                                        <small><i class="fas fa-phone"></i> {{=acc.telephone}}</small>
+                                    {{if b.telephone:}}
+                                        <small><i class="fas fa-phone"></i> {{=b.telephone}}</small>
                                     {{else:}}
                                         <small class="text-muted">No phone</small>
                                     {{pass}}
                                 </td>
-                                <td>{{='%.2f' % (acc.amount_borrowed or 0)}}</td>
-                                <td>{{='%.2f' % (acc.amount_repaid_b2c_reported or 0)}}</td>
+                                <td>{{='%.2f' % (b.amount_borrowed or 0)}}</td>
+                                <td>{{='%.2f' % (b.amount_repaid_b2c_reported or 0)}}</td>
                                 <td>
+                                    <span class="{{='text-danger' if balance > 0 else 'text-success'}}">
+                                        {{='%.2f' % balance}}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{if data['recent_worse_signals'] > 0:}}
+                                        <span class="badge bg-orange">
+                                            {{=data['recent_worse_signals']}} "Worse"
+                                        </span>
+                                    {{else:}}
+                                        <span class="text-muted">None</span>
+                                    {{pass}}
+                                </td>
+                                <td>
+                                    {{if data['pending_offers'] > 0:}}
+                                        <span class="badge bg-info">
+                                            {{=data['pending_offers']}} pending
+                                        </span>
+                                    {{else:}}
+                                        <span class="text-muted">None</span>
+                                    {{pass}}
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
-                                        <a href="{{=URL('b2c', args=[acc.id])}}" 
+                                        <a href="{{=URL('b2c', args=[b.id])}}" 
                                            class="btn btn-outline-primary"
                                            title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{=URL('edit_b2c', args=[acc.id])}}" 
+                                        <a href="{{=URL('create_offer', args=[b.id])}}" 
+                                           class="btn btn-outline-success"
+                                           title="Create Support Offer">
+                                            <i class="fas fa-hand-holding-heart"></i>
+                                        </a>
+                                        <a href="{{=URL('edit_b2c', args=[b.id])}}" 
                                            class="btn btn-outline-warning"
                                            title="Edit">
                                             <i class="fas fa-edit"></i>
@@ -109,29 +166,37 @@
         </div>
     </div>
 
+    <!-- Bounded Response Types Guide -->
+    <div class="card mt-4 bg-light">
+        <div class="card-body">
+            <h6><i class="fas fa-book"></i> The 5 Bounded Support Offer Types</h6>
+            <div class="row small">
+                <div class="col-md-4">
+                    <strong>1. Adjust Payment Timing</strong>
+                    <p class="mb-2">Coordination: Change dates, meeting times, process adjustments</p>
+                    
+                    <strong>2. Share Information</strong>
+                    <p class="mb-2">Info Gap: Resources, contacts, programs they don't know about</p>
+                </div>
+                <div class="col-md-4">
+                    <strong>3. Offer Restructuring</strong>
+                    <p class="mb-2">Shock Response: Payment restructuring for external shocks</p>
+                    
+                    <strong>4. Facilitate Service Access</strong>
+                    <p class="mb-2">Info/Constraint: Connect to complementary services</p>
+                </div>
+                <div class="col-md-4">
+                    <strong>5. Request Conversation</strong>
+                    <p class="mb-2">Complex: For situations needing dialogue</p>
+                    
+                    <p class="text-muted mb-0"><em>All offers can be accepted, declined, or modified by borrowers.</em></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <style>
-    .stat-card {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border: none;
-        transition: transform 0.2s;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    
-    .stat-card h3 {
-        font-size: 2.5rem;
-        font-weight: 700;
-    }
-    
-    .stat-card p {
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-    
     .card {
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         margin-bottom: 1.5rem;
@@ -154,8 +219,17 @@
     }
     
     .badge {
-        padding: 0.5rem 0.75rem;
+        padding: 0.4rem 0.6rem;
         font-weight: 600;
+    }
+    
+    .bg-orange {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .table-warning {
+        background-color: #fff3cd;
     }
     
     @media (max-width: 768px) {
@@ -164,41 +238,14 @@
             margin-top: 1rem;
         }
         
-        .btn-group-sm {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .stat-card {
-            margin-bottom: 1rem;
-        }
-        
         .table-responsive {
             font-size: 0.85rem;
         }
     }
-    
-    /* Status badge colors */
-    .bg-success {
-        background-color: #28a745 !important;
-    }
-    
-    .bg-warning {
-        background-color: #ffc107 !important;
-        color: #000 !important;
-    }
-    
-    .bg-danger {
-        background-color: #dc3545 !important;
-    }
 </style>
 
 <script>
-// Add DataTables for better table management (optional)
 document.addEventListener('DOMContentLoaded', function() {
-    // You can add DataTables here if you want sorting/filtering
-    // $('.table').DataTable();
-    
     // Auto-dismiss flash messages after 5 seconds
     setTimeout(function() {
         $('.alert').fadeOut('slow');
