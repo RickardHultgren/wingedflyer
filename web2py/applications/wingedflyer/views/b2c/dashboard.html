@@ -11,115 +11,215 @@
             <a href="{{=URL('logout')}}" class="btn btn-secondary">Logout</a>
         </div>
     </div>
-    <table class="table table-bordered table-sm mt-3">
-        <thead class="thead-light">
-            <tr>
-                <th style="width: 30%;">Field</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Real Name</td>
-                <td>{{=borrower.real_name or ''}}</td>
-            </tr>
-            <tr>
-                <td>Username</td>
-                <td>{{=borrower.username}}</td>
-            </tr>
-            <tr>
-                <td>Address</td>
-                <td>{{=borrower.address or ''}}</td>
-            </tr>
-            <tr>
-                <td>Telephone</td>
-                <td>{{=borrower.telephone or ''}}</td>
-            </tr>
-            <tr>
-                <td>Email</td>
-                <td>{{=borrower.email or ''}}</td>
-            </tr>
-            <tr>
-                <td>Social Media</td>
-                <td>{{=borrower.social_media or ''}}</td>
-            </tr>
 
-            <tr class="table-secondary">
-                <td colspan="2"><strong>Financials</strong></td>
-            </tr>
+    <!-- Flash Messages -->
+    {{if session.flash:}}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        {{=session.flash}}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {{pass}}
 
-            <tr>
-                <td>Amount Borrowed</td>
-                <td>{{=borrower.amount_borrowed}}</td>
-            </tr>
-            <tr>
-                <td>Amount Repaid (B2C Reported)</td>
-                <td>{{=borrower.amount_repaid_b2c_reported}}</td>
-            </tr>
-            <tr>
-                <td>Outstanding Balance</td>
-                <td>
-                    {{=borrower.amount_borrowed - borrower.amount_repaid_b2c_reported}}
-                </td>
-            </tr>
+    <!-- Pending Support Offers Alert -->
+    {{if len(pending_offers) > 0:}}
+    <div class="alert alert-warning">
+        <h5><i class="fas fa-hand-holding-heart"></i> You have {{=len(pending_offers)}} pending support offer{{='s' if len(pending_offers) > 1 else ''}} from your MFI</h5>
+        <p class="mb-2">Your MFI has offered support that you can accept, decline, or request modification on:</p>
+        {{for offer in pending_offers:}}
+            <div class="mb-2 p-3 bg-white rounded">
+                <strong>{{=offer.offer_type.replace('_', ' ').title()}}:</strong> {{=offer.offer_text}}<br>
+                <a href="{{=URL('respond_offer', args=[offer.id])}}" class="btn btn-sm btn-primary mt-2">
+                    Respond to This Offer
+                </a>
+            </div>
+        {{pass}}
+        <a href="{{=URL('support_offers')}}" class="btn btn-warning">
+            View All Offers
+        </a>
+    </div>
+    {{pass}}
 
-            <tr class="table-secondary">
-                <td colspan="2"><strong>Status & Metadata</strong></td>
-            </tr>
-
-            <tr>
-                <td>Last Status Update</td>
-                <td>{{=borrower.last_status_update}}</td>
-            </tr>
-            <tr>
-                <td>Status Notes</td>
-                <td>{{=borrower.status_notes or ''}}</td>
-            </tr>
-            <tr>
-                <td>Created On</td>
-                <td>{{=borrower.created_on}}</td>
-            </tr>
-            <tr>
-                <td>Last Updated</td>
-                <td>{{=borrower.updated_on}}</td>
-            </tr>
-        </tbody>
-    </table>
-
-
-    <!-- Action Cards Row -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card h-100 border-primary">
-                <div class="card-body text-center">
-                    <i class="fas fa-qrcode fa-3x text-primary mb-3"></i>
-                    <h5 class="card-title">Micro-Page & QR Code</h5>
-                    <p class="card-text">Manage your public profile and share your QR code</p>
-                    <a href="{{=URL('editor')}}" class="btn btn-primary">Manage Page</a>
+    <!-- Financial Summary Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">💰 Financial Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <h3>{{='%.2f' % (borrower.amount_borrowed or 0)}}</h3>
+                    <p class="text-muted">Amount Borrowed</p>
                 </div>
+                <div class="col-md-4">
+                    <h3>{{='%.2f' % (borrower.amount_repaid_b2c_reported or 0)}}</h3>
+                    <p class="text-muted">Amount Repaid</p>
+                </div>
+                <div class="col-md-4">
+                    <h3 class="{{='text-danger' if balance > 0 else 'text-success'}}">
+                        {{='%.2f' % balance}}
+                    </h3>
+                    <p class="text-muted">Outstanding Balance</p>
+                </div>
+            </div>
+            {{if borrower.amount_borrowed > 0:}}
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar bg-success" role="progressbar" 
+                     style="width: {{='%.1f' % repayment_percentage}}%">
+                    {{='%.1f' % repayment_percentage}}% Repaid
+                </div>
+            </div>
+            {{pass}}
+            <div class="text-center mt-3">
+                <a href="{{=URL('finances')}}" class="btn btn-outline-success">
+                    View Full Financial Details
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Recent Timeline -->
-    {{if recent_timeline:}}
+    <!-- Upcoming Payments -->
+    {{if upcoming_payments:}}
     <div class="card mb-4">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="mb-0">Recent Updates</h5>
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">📅 Upcoming Payments</h5>
         </div>
         <div class="card-body">
-            <div class="list-group list-group-flush">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Days Until Due</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{for payment in upcoming_payments:}}
+                        {{
+                        from datetime import datetime
+                        today = datetime.now().date()
+                        days_until = (payment.due_date - today).days
+                        }}
+                        <tr class="{{='table-danger' if days_until < 3 else ('table-warning' if days_until < 7 else '')}}">
+                            <td>{{='%.2f' % payment.amount}}</td>
+                            <td>{{=payment.due_date.strftime('%Y-%m-%d')}}</td>
+                            <td>
+                                {{if days_until < 0:}}
+                                    <span class="badge bg-danger">{{=-days_until}} days overdue</span>
+                                {{elif days_until == 0:}}
+                                    <span class="badge bg-danger">Due today</span>
+                                {{else:}}
+                                    {{=days_until}} days
+                                {{pass}}
+                            </td>
+                        </tr>
+                        {{pass}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {{pass}}
+
+    <!-- Work Activities & Daily Signals -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">📊 My Work Activities & Signals</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Define your work activities and signal daily how things are going. 
+                Your MFI uses these signals to offer support, not to judge you.
+            </p>
+            
+            {{if len(work_activities) == 0:}}
+                <div class="alert alert-info">
+                    <h6>Get Started</h6>
+                    <p>You haven't defined any work activities yet. Start by adding up to 5 activities that matter for your business.</p>
+                    <a href="{{=URL('my_activities')}}" class="btn btn-primary">
+                        Define My Activities
+                    </a>
+                </div>
+            {{else:}}
+                <h6>Your Active Activities ({{=len(work_activities)}})</h6>
+                <ul class="list-group mb-3">
+                    {{for activity in work_activities:}}
+                    <li class="list-group-item">
+                        <strong>{{=activity.activity_name}}</strong>
+                        {{if activity.description:}}
+                            <br><small class="text-muted">{{=activity.description}}</small>
+                        {{pass}}
+                    </li>
+                    {{pass}}
+                </ul>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <a href="{{=URL('daily_signal')}}" class="btn btn-success btn-block w-100">
+                            <i class="fas fa-plus-circle"></i> Record Today's Signals
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <a href="{{=URL('my_activities')}}" class="btn btn-outline-primary btn-block w-100">
+                            <i class="fas fa-cog"></i> Manage Activities
+                        </a>
+                    </div>
+                </div>
+
+                {{if recent_signals:}}
+                    <hr>
+                    <h6>Recent Signals (Last 7 Days)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Activity</th>
+                                    <th>Outcome</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{for signal in recent_signals[:10]:}}
+                                <tr>
+                                    <td>{{=signal.daily_signal.signal_date.strftime('%Y-%m-%d')}}</td>
+                                    <td>{{=signal.work_activity.activity_name}}</td>
+                                    <td>
+                                        {{if signal.daily_signal.outcome == 'BETTER':}}
+                                            <span class="badge bg-success">Better</span>
+                                        {{elif signal.daily_signal.outcome == 'AS_EXPECTED':}}
+                                            <span class="badge bg-secondary">As Expected</span>
+                                        {{else:}}
+                                            <span class="badge bg-warning text-dark">Worse</span>
+                                        {{pass}}
+                                    </td>
+                                    <td><small>{{=signal.daily_signal.note or '-'}}</small></td>
+                                </tr>
+                                {{pass}}
+                            </tbody>
+                        </table>
+                    </div>
+                    <a href="{{=URL('signal_history')}}" class="btn btn-sm btn-outline-secondary">
+                        View Full History
+                    </a>
+                {{pass}}
+            {{pass}}
+        </div>
+    </div>
+
+    <!-- Recent Timeline Messages -->
+    {{if recent_timeline:}}
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">📋 Recent Updates from Your MFI</h5>
+        </div>
+        <div class="card-body">
+            <div class="list-group">
                 {{for msg in recent_timeline:}}
                 <div class="list-group-item">
                     <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">
-                            {{if msg.title.startswith('[From Borrower]'):}}
-                                <span class="badge badge-info">You</span>
-                            {{else:}}
-                                <span class="badge badge-primary">MFI</span>
-                            {{pass}}
-                            {{=msg.title.replace('[From Borrower] ', '')}}
-                        </h6>
+                        <h6 class="mb-1">{{=msg.title}}</h6>
                         <small>{{=msg.the_date.strftime('%Y-%m-%d')}}</small>
                     </div>
                     {{if msg.the_message:}}
@@ -129,7 +229,7 @@
                 {{pass}}
             </div>
             <div class="text-center mt-3">
-                <a href="{{=URL('timeline')}}" class="btn btn-sm btn-outline-secondary">
+                <a href="{{=URL('timeline')}}" class="btn btn-sm btn-outline-info">
                     View Complete Timeline
                 </a>
             </div>
@@ -137,35 +237,85 @@
     </div>
     {{pass}}
 
-<script>
-function copyUrl() {
-    var copyText = document.getElementById("quickShareUrl");
-    copyText.select();
-    copyText.setSelectionRange(0, 99999);
-    document.execCommand("copy");
-    
-    // Show feedback
-    var btn = event.target.closest('button');
-    var originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-    btn.classList.add('btn-success');
-    btn.classList.remove('btn-outline-secondary');
-    
-    setTimeout(function() {
-        btn.innerHTML = originalText;
-        btn.classList.remove('btn-success');
-        btn.classList.add('btn-outline-secondary');
-    }, 2000);
-}
-</script>
+    <!-- Quick Actions -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Quick Actions</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <a href="{{=URL('daily_signal')}}" class="btn btn-outline-primary btn-block w-100">
+                        <i class="fas fa-signal"></i><br>Record Signals
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{=URL('support_offers')}}" class="btn btn-outline-warning btn-block w-100">
+                        <i class="fas fa-handshake"></i><br>Support Offers
+                        {{if len(pending_offers) > 0:}}
+                            <span class="badge bg-danger">{{=len(pending_offers)}}</span>
+                        {{pass}}
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{=URL('finances')}}" class="btn btn-outline-success btn-block w-100">
+                        <i class="fas fa-money-bill-wave"></i><br>Finances
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{=URL('editor')}}" class="btn btn-outline-info btn-block w-100">
+                        <i class="fas fa-edit"></i><br>My Flyer
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Autonomy Notice -->
+    <div class="alert alert-light border">
+        <small class="text-muted">
+            <i class="fas fa-shield-alt"></i> 
+            <strong>Your Autonomy Matters:</strong> Your signals are for coordination with your MFI, not for judgment. 
+            All support offers can be accepted, declined, or modified based on your needs. 
+            You remain in control of your decisions.
+        </small>
+    </div>
+</div>
 
 <style>
     .card {
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         transition: transform 0.2s;
     }
+    
     .card:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
+    
+    .btn-block {
+        padding: 1rem;
+        font-weight: 600;
+    }
+    
+    .progress {
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    @media (max-width: 768px) {
+        .text-right {
+            text-align: left !important;
+            margin-top: 1rem;
+        }
+    }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismiss flash messages
+    setTimeout(function() {
+        $('.alert-info.alert-dismissible').fadeOut('slow');
+    }, 5000);
+});
+</script>
