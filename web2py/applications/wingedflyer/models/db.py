@@ -32,6 +32,7 @@ db.define_table(
     Field('username', 'string', unique=True, notnull=True),
     Field('password_hash', 'password', readable=False, writable=True),
     Field('name', 'string', notnull=True),
+    Field('telephone', 'string'),
     Field('email', 'string'),
     Field('contact_person', 'string'),
     Field('country', 'string'),
