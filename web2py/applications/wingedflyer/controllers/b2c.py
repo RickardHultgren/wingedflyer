@@ -293,6 +293,27 @@ def daily_signal():
     )
 
 
+@b2c_requires_login
+def delete_signal():
+    """Delete a signal (allows re-recording)"""
+    signal_id = request.args(0, cast=int)
+    if not signal_id:
+        session.flash = "Invalid signal"
+        redirect(URL('daily_signal'))
+    
+    signal = db.daily_signal(signal_id)
+    if not signal or signal.b2c_id != session.b2c_id:
+        session.flash = "Signal not found or access denied"
+        redirect(URL('daily_signal'))
+    
+    activity = db.work_activity(signal.work_activity_id)
+    activity_name = activity.activity_name if activity else "Unknown"
+    
+    db(db.daily_signal.id == signal_id).delete()
+    session.flash = "Signal deleted for %s. You can now record a new signal." % activity_name
+    redirect(URL('daily_signal'))
+
+
 # ---------------------------------------------------------------------
 # SIGNAL HISTORY
 # ---------------------------------------------------------------------
