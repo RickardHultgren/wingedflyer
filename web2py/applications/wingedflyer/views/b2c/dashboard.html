@@ -12,7 +12,7 @@
         </div>
     </div>
 
-    <!-- Flash Messages -->
+    <!-- Flash info_flyers -->
     {{if session.flash:}}
     <div class="alert alert-info alert-dismissible fade show" role="alert">
         {{=session.flash}}
@@ -208,7 +208,7 @@
         </div>
     </div>
 
-    <!-- Recent Timeline Messages -->
+    <!-- Recent Timeline info_flyers -->
     {{if recent_timeline:}}
     <div class="card mb-4">
         <div class="card-header bg-info text-white">
@@ -222,8 +222,8 @@
                         <h6 class="mb-1">{{=msg.title}}</h6>
                         <small>{{=msg.the_date.strftime('%Y-%m-%d')}}</small>
                     </div>
-                    {{if msg.the_message:}}
-                    <p class="mb-1">{{=msg.the_message}}</p>
+                    {{if msg.the_info_flyer:}}
+                    <p class="mb-1">{{=msg.the_info_flyer}}</p>
                     {{pass}}
                 </div>
                 {{pass}}
@@ -313,7 +313,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-dismiss flash messages
+    // Auto-dismiss flash info_flyers
     setTimeout(function() {
         $('.alert-info.alert-dismissible').fadeOut('slow');
     }, 5000);

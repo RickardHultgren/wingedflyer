@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 WingedFlyer MFI Portal Controller
-Bounded support offers, no surveillance scoring
+With messaging system for borrower communication
 """
 
 import bcrypt
@@ -95,7 +95,7 @@ def dashboard():
         orderby=db.b2c.real_name
     )
 
-    # For each borrower, get signal summary
+    # For each borrower, get signal summary and info_flyer status
     borrower_data = []
     for b in borrowers:
         # Count signals with 'WORSE' outcome in last 7 days
@@ -105,11 +105,18 @@ def dashboard():
             (db.daily_signal.signal_date >= (datetime.now() - timedelta(days=7)).date())
         ).count()
 
-        # Count pending offers
-        pending_offers = db(
-            (db.support_offer.b2c_id == b.id) &
-            ((db.support_offer.borrower_response == 'PENDING') |
-             (db.support_offer.borrower_response == None))
+        # Count unread info_flyers
+        unread_info_flyers = db(
+            (db.info_flyer_recipient.b2c_id == b.id) &
+            (db.info_flyer_recipient.is_read == False)
+        ).count()
+
+        # Count pending responses (info_flyers with response templates that haven't been responded to)
+        pending_responses = db(
+            (db.info_flyer_recipient.b2c_id == b.id) &
+            (db.info_flyer_recipient.response == None) &
+            (db.mfi_info_flyer.id == db.info_flyer_recipient.info_flyer_id) &
+            (db.mfi_info_flyer.response_template != 'NONE')
         ).count()
 
         # Check for late payments
@@ -122,7 +129,8 @@ def dashboard():
         borrower_data.append({
             'borrower': b,
             'recent_worse_signals': recent_worse,
-            'pending_offers': pending_offers,
+            'unread_info_flyers': unread_info_flyers,
+            'pending_responses': pending_responses,
             'overdue_payments': overdue_payments,
             'needs_attention': recent_worse > 2 or overdue_payments > 0
         })
@@ -158,6 +166,119 @@ def create_b2c():
 
     return dict(form=form, current_count=current_count, 
                 max_accounts=mfi_record.b2c_accounts)
+
+
+# ---------------------------------------------------------------------
+# info_flyer COMPOSER - Send info_flyer to one or more borrowers
+# ---------------------------------------------------------------------
+@mfi_requires_login
+def compose_info_flyer():
+    """Compose and send a info_flyer to one or more borrowers"""
+    
+    borrowers = db(db.b2c.mfi_id == session.mfi_id).select(orderby=db.b2c.real_name)
+    
+    recipient_arg = request.args(0) if request.args else None
+    preselected_recipients = []
+    if recipient_arg:
+        preselected_recipients = [int(recipient_arg)]
+    
+    form = SQLFORM.factory(
+Field('recipients', 'list:integer', 
+              label="Recipients",
+              requires=IS_IN_SET([(b.id, "%s (%s)" % (b.real_name, b.username)) for b in borrowers], 
+                                 multiple=True,
+                                 error_message="Please select at least one recipient"),
+              widget=SQLFORM.widgets.checkboxes.widget,
+              comment="Select one or more borrowers to send this message to"),
+        Field('subject', 'string', label="Subject", 
+              # CHANGED error_info_flyer to error_message below
+              requires=IS_NOT_EMPTY(error_message="Subject is required")),
+        Field('info_flyer_text', 'text', label="Message Content",
+              # CHANGED error_info_flyer to error_message below
+              requires=IS_NOT_EMPTY(error_message="Message text is required")),
+        Field('response_template', 'string', label="Response Type",
+              requires=IS_IN_SET([
+                  ('NONE', 'No Response Needed'),
+                  ('CHECKBOX_READ', 'Mark as Read Checkbox'),
+                  ('ACCEPT_DECLINE', 'Accept/Decline Buttons'),
+                  ('TEXT_RESPONSE', 'Text Response Field')
+              ]),
+              default='NONE'),
+        submit_button="Send Message"
+    )
+    
+    if form.process().accepted:
+        # This function must be defined in your models/db.py
+        info_flyer_id = send_info_flyer_to_borrowers(
+            mfi_id=session.mfi_id,
+            b2c_ids=form.vars.recipients,
+            subject=form.vars.subject,
+            info_flyer_text=form.vars.info_flyer_text,
+            response_template=form.vars.response_template,
+            sent_by=session.mfi_username
+        )
+        
+        session.flash = "Message sent successfully"
+        redirect(URL('sent_info_flyers'))
+    
+    return dict(form=form, borrowers=borrowers)
+
+# ---------------------------------------------------------------------
+# VIEW SENT info_flyerS
+# ---------------------------------------------------------------------
+@mfi_requires_login
+def sent_info_flyers():
+    """View all info_flyers sent by this MFI"""
+    
+    info_flyers = db(db.mfi_info_flyer.mfi_id == session.mfi_id).select(
+        orderby=~db.mfi_info_flyer.created_on
+    )
+    
+    # For each info_flyer, get recipient statistics
+    info_flyer_data = []
+    for msg in info_flyers:
+        recipients = db(db.info_flyer_recipient.info_flyer_id == msg.id).select()
+        
+        total_recipients = len(recipients)
+        read_count = sum(1 for r in recipients if r.is_read)
+        responded_count = sum(1 for r in recipients if r.response)
+        
+        info_flyer_data.append({
+            'info_flyer': msg,
+            'total_recipients': total_recipients,
+            'read_count': read_count,
+            'responded_count': responded_count,
+            'recipients': recipients
+        })
+    
+    return dict(info_flyer_data=info_flyer_data)
+
+
+# ---------------------------------------------------------------------
+# VIEW info_flyer DETAILS AND RESPONSES
+# ---------------------------------------------------------------------
+@mfi_requires_login
+def info_flyer_details():
+    """View details of a specific info_flyer and all responses"""
+    info_flyer_id = request.args(0, cast=int)
+    if not info_flyer_id:
+        session.flash = "Invalid info_flyer"
+        redirect(URL('sent_info_flyers'))
+    
+    info_flyer = db.mfi_info_flyer(info_flyer_id)
+    if not info_flyer or info_flyer.mfi_id != session.mfi_id:
+        session.flash = "info_flyer not found"
+        redirect(URL('sent_info_flyers'))
+    
+    # Get all recipients and their responses
+    recipients = db(db.info_flyer_recipient.info_flyer_id == info_flyer_id).select(
+        db.info_flyer_recipient.ALL,
+        db.b2c.ALL,
+        left=db.b2c.on(db.info_flyer_recipient.b2c_id == db.b2c.id),
+        orderby=db.b2c.real_name
+    )
+    
+    return dict(info_flyer=info_flyer, recipients=recipients)
 
 
 # ---------------------------------------------------------------------
@@ -201,15 +322,20 @@ def b2c():
         limitby=(0, 10)
     )
 
-    # Get support offers
-    support_offers = db(db.support_offer.b2c_id == b2c_id).select(
-        orderby=~db.support_offer.created_on,
+    # Get info_flyers sent to this borrower
+    borrower_info_flyers = db(
+        (db.info_flyer_recipient.b2c_id == b2c_id)
+    ).select(
+        db.info_flyer_recipient.ALL,
+        db.mfi_info_flyer.ALL,
+        left=db.mfi_info_flyer.on(db.info_flyer_recipient.info_flyer_id == db.mfi_info_flyer.id),
+        orderby=~db.mfi_info_flyer.created_on,
         limitby=(0, 10)
     )
 
     # Get timeline
-    timeline = db(db.b2c_timeline_message.b2c_id == b2c_id).select(
-        orderby=~db.b2c_timeline_message.the_date,
+    timeline = db(db.b2c_timeline_info_flyer.b2c_id == b2c_id).select(
+        orderby=~db.b2c_timeline_info_flyer.the_date,
         limitby=(0, 10)
     )
 
@@ -236,23 +362,23 @@ def b2c():
         session.flash = "Payment recorded"
         redirect(URL('b2c', args=[b2c_id]))
 
-    # Timeline message form
+    # Timeline info_flyer form
     timeline_form = SQLFORM.factory(
         Field('title', 'string', label="Title", requires=IS_NOT_EMPTY()),
-        Field('message', 'text', label="Message"),
+        Field('info_flyer', 'text', label="info_flyer"),
         Field('date', 'datetime', label="Date", default=request.now),
-        submit_button="Add Timeline Message",
+        submit_button="Add Timeline info_flyer",
         formname='timeline'
     )
 
     if timeline_form.process().accepted:
-        db.b2c_timeline_message.insert(
+        db.b2c_timeline_info_flyer.insert(
             b2c_id=b2c_id,
             title=timeline_form.vars.title,
-            the_message=timeline_form.vars.message,
+            the_info_flyer=timeline_form.vars.info_flyer,
             the_date=timeline_form.vars.date
         )
-        session.flash = "Timeline message added"
+        session.flash = "Timeline info_flyer added"
         redirect(URL('b2c', args=[b2c_id]))
 
     # Repayment tracking form
@@ -281,97 +407,12 @@ def b2c():
         work_activities=work_activities,
         recent_signals=recent_signals,
         payments=payments,
-        support_offers=support_offers,
+        borrower_info_flyers=borrower_info_flyers,
         timeline=timeline,
         payment_form=payment_form,
         timeline_form=timeline_form,
         repay_form=repay_form,
         balance=balance
-    )
-
-
-# ---------------------------------------------------------------------
-# CREATE SUPPORT OFFER (The ONLY way MFIs act on signals)
-# ---------------------------------------------------------------------
-@mfi_requires_login
-def create_offer():
-    """Create a support offer for borrower"""
-    b2c_id = request.args(0, cast=int)
-    if not b2c_id:
-        session.flash = "Invalid B2C account"
-        redirect(URL('dashboard'))
-
-    borrower = db.b2c(b2c_id)
-    if not borrower or borrower.mfi_id != session.mfi_id:
-        session.flash = "Unauthorized access"
-        redirect(URL('dashboard'))
-
-    # Get recent signals that might trigger offers
-    recent_signals = get_recent_signals(b2c_id, days=7)
-
-    form = SQLFORM.factory(
-        Field('offer_type', 'string', label="Type of Support Offer",
-              requires=IS_IN_SET([
-                  ('ADJUST_PAYMENT_TIMING', 'Adjust Payment Timing (Coordination)'),
-                  ('SHARE_INFORMATION', 'Share Information/Resources (Info Gap)'),
-                  ('OFFER_RESTRUCTURING', 'Offer Payment Restructuring (Shock Response)'),
-                  ('FACILITATE_SERVICE_ACCESS', 'Facilitate Service Access (Info/Constraint)'),
-                  ('REQUEST_CONVERSATION', 'Request Conversation (Complex)')
-              ]),
-              comment="Select the type of support you're offering"),
-        Field('trigger_signal', 'string', label="What triggered this offer?",
-              comment="Which borrower signal prompted this?"),
-        Field('offer_text', 'text', label="Offer Details", requires=IS_NOT_EMPTY(),
-              comment="Explain clearly what you're offering. Remember: this is an OFFER, not a command."),
-        submit_button="Create Support Offer"
-    )
-
-    if form.process().accepted:
-        create_support_offer(
-            b2c_id=b2c_id,
-            offer_type=form.vars.offer_type,
-            offer_text=form.vars.offer_text,
-            trigger_signal=form.vars.trigger_signal
-        )
-        session.flash = "Support offer sent to borrower. They can accept, decline, or request modification."
-        redirect(URL('b2c', args=[b2c_id]))
-
-    return dict(
-        borrower=borrower,
-        form=form,
-        recent_signals=recent_signals
-    )
-
-
-# ---------------------------------------------------------------------
-# VIEW OFFER RESPONSES
-# ---------------------------------------------------------------------
-@mfi_requires_login
-def offer_responses():
-    """View how borrowers have responded to offers"""
-    
-    # Get all offers across all borrowers
-    offers = db(
-        (db.support_offer.b2c_id == db.b2c.id) &
-        (db.b2c.mfi_id == session.mfi_id)
-    ).select(
-        db.support_offer.ALL,
-        db.b2c.real_name,
-        db.b2c.username,
-        orderby=~db.support_offer.created_on
-    )
-
-    # Separate by response status
-    pending = [o for o in offers if o.support_offer.borrower_response in (None, 'PENDING')]
-    accepted = [o for o in offers if o.support_offer.borrower_response == 'ACCEPTED']
-    declined = [o for o in offers if o.support_offer.borrower_response == 'DECLINED']
-    modified = [o for o in offers if o.support_offer.borrower_response == 'MODIFIED']
-
-    return dict(
-        pending=pending,
-        accepted=accepted,
-        declined=declined,
-        modified=modified
     )
 
 
@@ -460,20 +501,20 @@ def delete_payment():
 
 
 # ---------------------------------------------------------------------
-# DELETE TIMELINE MESSAGE
+# DELETE TIMELINE info_flyer
 # ---------------------------------------------------------------------
 @mfi_requires_login
 def delete_timeline():
-    """Delete a timeline message"""
+    """Delete a timeline info_flyer"""
     msg_id = request.args(0, cast=int)
     if msg_id:
-        msg = db.b2c_timeline_message(msg_id)
+        msg = db.b2c_timeline_info_flyer(msg_id)
         if msg:
             borrower = db.b2c(msg.b2c_id)
             if borrower and borrower.mfi_id == session.mfi_id:
                 b2c_id = msg.b2c_id
-                db(db.b2c_timeline_message.id == msg_id).delete()
-                session.flash = "Timeline message deleted"
+                db(db.b2c_timeline_info_flyer.id == msg_id).delete()
+                session.flash = "Timeline info_flyer deleted"
                 redirect(URL('b2c', args=[b2c_id]))
     
     session.flash = "Invalid request"

@@ -117,13 +117,13 @@ def dashboard():
     # Get recent signals
     recent_signals = get_recent_signals(session.b2c_id, days=7)
 
-    # Get pending support offers from MFI
-    pending_offers = get_pending_offers(session.b2c_id)
+    # Get pending support offers from MFI (now info_flyers)
+    unread_info_flyers = get_unread_info_flyers(session.b2c_id)
 
-    # Get recent timeline messages
+    # Get recent timeline info_flyers
     recent_timeline = db(
-        db.b2c_timeline_message.b2c_id == session.b2c_id
-    ).select(orderby=~db.b2c_timeline_message.the_date, limitby=(0, 5))
+        db.b2c_timeline_info_flyer.b2c_id == session.b2c_id
+    ).select(orderby=~db.b2c_timeline_info_flyer.the_date, limitby=(0, 5))
 
     # Get upcoming payments
     upcoming_payments = db(
@@ -138,7 +138,7 @@ def dashboard():
         repayment_percentage=repayment_percentage,
         work_activities=work_activities,
         recent_signals=recent_signals,
-        pending_offers=pending_offers,
+        pending_offers=unread_info_flyers,
         recent_timeline=recent_timeline,
         upcoming_payments=upcoming_payments
     )
@@ -340,64 +340,84 @@ def signal_history():
 
 
 # ---------------------------------------------------------------------
-# SUPPORT OFFERS - View and respond to MFI offers
+# info_flyerS - View and respond to MFI info_flyers
 # ---------------------------------------------------------------------
 @b2c_requires_login
-def support_offers():
-    """View and respond to support offers from MFI"""
+def info_flyers():
+    """View all info_flyers from MFI"""
     borrower = db.b2c(session.b2c_id)
     if not borrower:
         session.clear()
         redirect(URL('login'))
 
-    # Get all offers (pending and responded)
-    pending = db(
-        (db.support_offer.b2c_id == session.b2c_id) &
-        ((db.support_offer.borrower_response == 'PENDING') |
-         (db.support_offer.borrower_response == None))
-    ).select(orderby=~db.support_offer.created_on)
+    # Get all info_flyers for this borrower
+    all_info_flyers = db(
+        db.info_flyer_recipient.b2c_id == session.b2c_id
+    ).select(
+        db.info_flyer_recipient.ALL,
+        db.mfi_info_flyer.ALL,
+        left=db.mfi_info_flyer.on(db.info_flyer_recipient.info_flyer_id == db.mfi_info_flyer.id),
+        orderby=~db.mfi_info_flyer.created_on
+    )
 
-    responded = db(
-        (db.support_offer.b2c_id == session.b2c_id) &
-        (db.support_offer.borrower_response != None) &
-        (db.support_offer.borrower_response != 'PENDING')
-    ).select(orderby=~db.support_offer.responded_on, limitby=(0, 10))
+    # Separate into unread and read
+    unread = [m for m in all_info_flyers if not m.info_flyer_recipient.is_read]
+    read = [m for m in all_info_flyers if m.info_flyer_recipient.is_read]
 
-    return dict(borrower=borrower, pending=pending, responded=responded)
+    return dict(borrower=borrower, unread=unread, read=read)
 
 
 @b2c_requires_login
-def respond_offer():
-    """Respond to a support offer"""
-    offer_id = request.args(0, cast=int)
-    if not offer_id:
-        session.flash = "Invalid offer"
-        redirect(URL('support_offers'))
+def view_info_flyer():
+    """View a specific info_flyer and respond if needed"""
+    info_flyer_recipient_id = request.args(0, cast=int)
+    if not info_flyer_recipient_id:
+        session.flash = "Invalid info_flyer"
+        redirect(URL('info_flyers'))
 
-    offer = db.support_offer(offer_id)
-    if not offer or offer.b2c_id != session.b2c_id:
-        session.flash = "Offer not found"
-        redirect(URL('support_offers'))
+    recipient = db.info_flyer_recipient(info_flyer_recipient_id)
+    if not recipient or recipient.b2c_id != session.b2c_id:
+        session.flash = "info_flyer not found"
+        redirect(URL('info_flyers'))
 
-    form = SQLFORM.factory(
-        Field('response', 'string',
-              requires=IS_IN_SET(['ACCEPTED', 'DECLINED', 'MODIFIED']),
-              widget=lambda field, value: SELECT(
-                  OPTION('Accept this offer', _value='ACCEPTED'),
-                  OPTION('Decline this offer', _value='DECLINED'),
-                  OPTION('Request modification', _value='MODIFIED'),
-                  _name=field.name, _class='form-control'
-              )),
-        Field('note', 'text', label="Your response/comments"),
-        submit_button="Send Response"
-    )
+    info_flyer = db.mfi_info_flyer(recipient.info_flyer_id)
+    
+    # Mark as read when viewed
+    if not recipient.is_read:
+        mark_info_flyer_read(info_flyer_recipient_id)
 
-    if form.process().accepted:
-        respond_to_offer(offer_id, form.vars.response, form.vars.note)
+    # Create response form based on template
+    form = None
+    if info_flyer.response_template == 'ACCEPT_DECLINE' and not recipient.response:
+        form = SQLFORM.factory(
+            Field('response', 'string',
+                  requires=IS_IN_SET(['ACCEPTED', 'DECLINED']),
+                  widget=lambda field, value: SELECT(
+                      OPTION('-- Select Response --', _value=''),
+                      OPTION('Accept', _value='ACCEPTED'),
+                      OPTION('Decline', _value='DECLINED'),
+                      _name=field.name, _class='form-control'
+                  )),
+            submit_button="Send Response"
+        )
+        
+    elif info_flyer.response_template == 'TEXT_RESPONSE' and not recipient.response:
+        form = SQLFORM.factory(
+            Field('response', 'text', label="Your Response",
+                  requires=IS_NOT_EMPTY()),
+            submit_button="Send Response"
+        )
+    
+    if form and form.process().accepted:
+        respond_to_info_flyer(info_flyer_recipient_id, form.vars.response)
         session.flash = "Response sent to MFI"
-        redirect(URL('support_offers'))
+        redirect(URL('info_flyers'))
 
-    return dict(offer=offer, form=form)
+    return dict(
+        recipient=recipient,
+        info_flyer=info_flyer,
+        form=form
+    )
 
 
 # ---------------------------------------------------------------------
@@ -456,11 +476,11 @@ def timeline():
         session.clear()
         redirect(URL('login'))
 
-    timeline_messages = db(
-        db.b2c_timeline_message.b2c_id == session.b2c_id
-    ).select(orderby=~db.b2c_timeline_message.the_date)
+    timeline_info_flyers = db(
+        db.b2c_timeline_info_flyer.b2c_id == session.b2c_id
+    ).select(orderby=~db.b2c_timeline_info_flyer.the_date)
 
-    return dict(borrower=borrower, timeline_messages=timeline_messages)
+    return dict(borrower=borrower, timeline_info_flyers=timeline_info_flyers)
 
 
 # ---------------------------------------------------------------------
