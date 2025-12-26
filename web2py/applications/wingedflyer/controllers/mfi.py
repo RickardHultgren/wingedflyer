@@ -419,11 +419,9 @@ def b2c():
 # ---------------------------------------------------------------------
 # SIGNALS OVERVIEW - See what borrowers are signaling
 # ---------------------------------------------------------------------
-@mfi_requires_login
+# controllers/mfi.py
+
 def signals_overview():
-    """View signals across all borrowers (no scoring, just visibility)"""
-    
-    # Get signals from last 7 days
     cutoff = (datetime.now() - timedelta(days=7)).date()
     
     signals = db(
@@ -432,6 +430,7 @@ def signals_overview():
         (db.daily_signal.signal_date >= cutoff)
     ).select(
         db.daily_signal.ALL,
+        db.b2c.id,        # Explicitly include this
         db.b2c.real_name,
         db.b2c.username,
         db.work_activity.activity_name,
@@ -441,7 +440,6 @@ def signals_overview():
         orderby=~db.daily_signal.signal_date
     )
 
-    # Group by outcome for quick overview
     worse_signals = [s for s in signals if s.daily_signal.outcome == 'WORSE']
     better_signals = [s for s in signals if s.daily_signal.outcome == 'BETTER']
     
@@ -450,7 +448,6 @@ def signals_overview():
         worse_signals=worse_signals,
         better_signals=better_signals
     )
-
 
 # ---------------------------------------------------------------------
 # EDIT B2C PROFILE
