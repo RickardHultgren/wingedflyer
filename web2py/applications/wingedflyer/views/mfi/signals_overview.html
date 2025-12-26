@@ -18,7 +18,7 @@
         <p class="mb-0 small">
             These signals show how borrowers' work is going according to <strong>their own plans and expectations</strong>. 
             They are for coordination and support, not for judging effort or productivity. 
-            When you see patterns that suggest you might be able to help, send a message or offer support—don't make unilateral decisions.
+            When you see patterns that suggest you might be able to help, send a info_flyer or offer support—don't make unilateral decisions.
         </p>
     </div>
 
@@ -122,9 +122,9 @@
                                                    title="View Borrower">
                                                     <i class="fas fa-user"></i>
                                                 </a>
-                                                <a href="{{=URL('compose_message', args=[signal.b2c.id])}}" 
+                                                <a href="{{=URL('compose_info_flyer', args=[signal.b2c.id])}}" 
                                                    class="btn btn-outline-success btn-sm"
-                                                   title="Send Message">
+                                                   title="Send info_flyer">
                                                     <i class="fas fa-envelope"></i>
                                                 </a>
                                             </div>
@@ -198,9 +198,9 @@
                                                    title="View Borrower">
                                                     <i class="fas fa-user"></i>
                                                 </a>
-                                                <a href="{{=URL('compose_message', args=[signal.b2c.id])}}" 
+                                                <a href="{{=URL('compose_info_flyer', args=[signal.b2c.id])}}" 
                                                    class="btn btn-outline-success btn-sm"
-                                                   title="Send Message">
+                                                   title="Send info_flyer">
                                                     <i class="fas fa-envelope"></i>
                                                 </a>
                                             </div>
@@ -233,8 +233,8 @@
                             {{borrower = db.b2c(b2c_id)}}
                             <li>
                                 <strong>{{=borrower.real_name}}</strong> ({{=borrower.username}}) - {{=count}} "worse" signals
-                                <a href="{{=URL('compose_message', args=[b2c_id])}}" class="btn btn-sm btn-outline-success ms-2">
-                                    <i class="fas fa-envelope"></i> Send Message
+                                <a href="{{=URL('compose_info_flyer', args=[b2c_id])}}" class="btn btn-sm btn-outline-success ms-2">
+                                    <i class="fas fa-envelope"></i> Send info_flyer
                                 </a>
                             </li>
                             {{pass}}
@@ -334,7 +334,7 @@
                     <ul class="mb-2">
                         <li>Identify potential coordination needs (timing, resources)</li>
                         <li>Spot external shocks affecting multiple borrowers</li>
-                        <li>Send messages offering relevant information or support</li>
+                        <li>Send info_flyers offering relevant information or support</li>
                         <li>Understand seasonal or market patterns</li>
                         <li>Celebrate successes with borrowers doing well</li>
                     </ul>
