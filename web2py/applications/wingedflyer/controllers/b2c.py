@@ -60,6 +60,7 @@ def login():
             except Exception as e:
                 response.flash = "Login error. Please contact your MFI."
                 print("B2C Login error: %s" % str(e))
+            redirect(URL(args=request.args, vars=request.vars))
         else:
             response.flash = "Invalid username or password"
     elif form.errors:

@@ -48,7 +48,14 @@ def hash_password(pwd):
         return bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     return pwd
 
-db.mfi._before_insert.append(lambda f: f.update(password_hash=hash_password(f.get('password_hash'))))
+#db.mfi._before_insert.append(lambda f: f.update(password_hash=hash_password(f.get('password_hash'))))
+
+def encrypt_mfi_password(row):
+    if 'password_hash' in row:
+        row['password_hash'] = hash_password(row['password_hash'])
+
+db.mfi._before_insert.append(encrypt_mfi_password)
+
 db.mfi._before_update.append(lambda s, f: f.update(password_hash=hash_password(f.get('password_hash'))))
 
 ############################################################
