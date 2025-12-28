@@ -135,10 +135,12 @@ def dashboard():
             'overdue_payments': overdue_payments,
             'needs_attention': recent_worse > 2 or overdue_payments > 0
         })
+    can_create = db(db.b2c.mfi_id == session.mfi_id).count() < mfi_record.b2c_accounts
 
     return dict(
         mfi=session.mfi_name,
-        borrower_data=borrower_data
+        borrower_data=borrower_data,
+        can_create=can_create
     )
 
 

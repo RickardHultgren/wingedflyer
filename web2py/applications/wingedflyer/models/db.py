@@ -56,7 +56,8 @@ def encrypt_mfi_password(row):
 
 db.mfi._before_insert.append(encrypt_mfi_password)
 
-db.mfi._before_update.append(lambda s, f: f.update(password_hash=hash_password(f.get('password_hash'))))
+# NEW/FIXED line 59
+db.mfi._before_update.append(lambda s, f: f.__setitem__('password_hash', hash_password(f.get('password_hash'))))
 
 ############################################################
 # 2. BORROWER TABLE
