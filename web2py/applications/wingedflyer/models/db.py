@@ -128,7 +128,7 @@ db.daily_signal.outcome.requires = IS_IN_SET(['BETTER', 'AS_EXPECTED', 'WORSE'])
 ############################################################
 # 5. PAYMENT TRACKING
 ############################################################
-
+'''
 db.define_table(
     'b2c_payment',
     Field('b2c_id', 'reference b2c', notnull=True),
@@ -155,6 +155,7 @@ def calculate_days_late(fields):
 
 db.b2c_payment._before_insert.append(calculate_days_late)
 db.b2c_payment._before_update.append(lambda s, f: calculate_days_late(f))
+'''
 
 ############################################################
 # 7. MESSAGING SYSTEM

@@ -122,9 +122,9 @@ def dashboard():
     unread_info_flyers = get_unread_info_flyers(session.b2c_id)
 
     # Get recent timeline info_flyers
-    recent_timeline = db(
-        db.b2c_timeline_info_flyer.b2c_id == session.b2c_id
-    ).select(orderby=~db.b2c_timeline_info_flyer.the_date, limitby=(0, 5))
+    #recent_timeline = db(
+    #    db.b2c_timeline_info_flyer.b2c_id == session.b2c_id
+    #).select(orderby=~db.b2c_timeline_info_flyer.the_date, limitby=(0, 5))
 
     # Get upcoming payments
     upcoming_payments = db(
