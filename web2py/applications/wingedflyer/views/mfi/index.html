@@ -1,0 +1,32 @@
+{{extend 'layout.html'}}
+
+<h2>MFI Dashboard</h2>
+
+<p>Below is the list of your vendor accounts.</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Vendor</th>
+            <th>Username</th>
+            <th>Borrowed</th>
+            <th>Paid Back</th>
+            <th>Working</th>
+            <th>Open</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{for v in b2c_accounts:}}
+        <tr>
+            <td>{{=v.real_name}}</td>
+            <td>{{=v.username}}</td>
+            <td>{{=v.amount_borrowed}}</td>
+            <td>{{=v.amount_paid_back}}</td>
+            <td>{{='Yes' if v.is_working else 'No'}}</td>
+            <td>
+                <a href="{{=URL('fmi', 'vendor', args=[v.id])}}">View</a>
+            </td>
+        </tr>
+        {{pass}}
+    </tbody>
+</table>

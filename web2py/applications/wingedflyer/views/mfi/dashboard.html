@@ -1,0 +1,266 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>MFI Dashboard</h2>
+            <p class="text-muted">Welcome, <strong>{{=mfi}}</strong></p>
+        </div>
+        <div class="col-md-4 text-right">
+            {{if can_create:}}
+                <a href="{{=URL('create_b2c')}}" class="btn btn-primary">Add New Borrower</a>
+            {{else:}}
+                <button class="btn btn-secondary" disabled title="Limit reached">Add New Borrower</button>
+            {{pass}}
+            <a href="{{=URL('logout')}}" class="btn btn-outline-secondary">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Flash info_flyers -->
+    {{if session.flash:}}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        {{=session.flash}}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {{pass}}
+
+    <!-- Quick Actions -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Quick Actions</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <a href="{{=URL('signals_overview')}}" class="btn btn-outline-primary btn-block w-100">
+                        <i class="fas fa-signal"></i> View All Signals
+                    </a>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <a href="{{=URL('compose_info_flyer')}}" class="btn btn-outline-success btn-block w-100">
+                        <i class="fas fa-envelope"></i> Compose info_flyer
+                    </a>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <a href="{{=URL('sent_info_flyers')}}" class="btn btn-outline-info btn-block w-100">
+                        <i class="fas fa-envelope-open"></i> Sent info_flyers
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Design Principle Reminder -->
+    <div class="alert alert-warning mb-4">
+        <h6><i class="fas fa-info-circle"></i> Communication Principles</h6>
+        <p class="mb-0 small">
+            <strong>Remember:</strong> info_flyers are for coordination and information sharing, not commands. 
+            When borrowers respond, treat their replies as valuable information for better support. 
+            Always respect borrower autonomy in all communications.
+        </p>
+    </div>
+
+    <!-- Borrowers List -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">All Borrowers</h5>
+        </div>
+        <div class="card-body">
+            {{if len(borrower_data) == 0:}}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5>No Borrowers Yet</h5>
+                    <p class="text-muted">Get started by adding your first borrower.</p>
+                    {{if can_create:}}
+                        <a href="{{=URL('create_b2c')}}" class="btn btn-primary">Add New Borrower</a>
+                    {{else:}}
+                        <button class="btn btn-secondary" disabled title="Limit reached">Add New Borrower</button>
+                    {{pass}}
+                </div>
+            {{else:}}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Username</th>
+                                <th>Contact</th>
+                                <th>Amount Borrowed</th>
+                                <th>Amount Repaid</th>
+                                <th>Balance</th>
+                                <th>Recent Signals</th>
+                                <th>Unread info_flyers</th>
+                                <th>Pending Responses</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{for data in borrower_data:}}
+                            {{
+                            b = data['borrower']
+                            balance = b.amount_borrowed - b.amount_repaid_b2c_reported
+                            }}
+                            <tr class="{{='table-warning' if data['needs_attention'] else ''}}">
+                                <td>
+                                    <strong>{{=b.real_name}}</strong>
+                                    {{if data['needs_attention']:}}
+                                        <span class="badge bg-warning text-dark">Attention</span>
+                                    {{pass}}
+                                </td>
+                                <td>{{=b.username}}</td>
+                                <td>
+                                    {{if b.telephone:}}
+                                        <small><i class="fas fa-phone"></i> {{=b.telephone}}</small>
+                                    {{else:}}
+                                        <small class="text-muted">No phone</small>
+                                    {{pass}}
+                                </td>
+                                <td>{{='%.2f' % (b.amount_borrowed or 0)}}</td>
+                                <td>{{='%.2f' % (b.amount_repaid_b2c_reported or 0)}}</td>
+                                <td>
+                                    <span class="{{='text-danger' if balance > 0 else 'text-success'}}">
+                                        {{='%.2f' % balance}}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{if data['recent_worse_signals'] > 0:}}
+                                        <span class="badge bg-orange">
+                                            {{=data['recent_worse_signals']}} "Worse"
+                                        </span>
+                                    {{else:}}
+                                        <span class="text-muted">None</span>
+                                    {{pass}}
+                                </td>
+                                <td>
+                                    {{if data['unread_info_flyers'] > 0:}}
+                                        <span class="badge bg-danger">
+                                            {{=data['unread_info_flyers']}} unread
+                                        </span>
+                                    {{else:}}
+                                        <span class="text-muted">None</span>
+                                    {{pass}}
+                                </td>
+                                <td>
+                                    {{if data['pending_responses'] > 0:}}
+                                        <span class="badge bg-info">
+                                            {{=data['pending_responses']}} pending
+                                        </span>
+                                    {{else:}}
+                                        <span class="text-muted">None</span>
+                                    {{pass}}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{{=URL('b2c', args=[b.id])}}" 
+                                           class="btn btn-outline-primary"
+                                           title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{=URL('compose_info_flyer', args=[b.id])}}" 
+                                           class="btn btn-outline-success"
+                                           title="Send info_flyer">
+                                            <i class="fas fa-envelope"></i>
+                                        </a>
+                                        <a href="{{=URL('edit_b2c', args=[b.id])}}" 
+                                           class="btn btn-outline-warning"
+                                           title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {{pass}}
+                        </tbody>
+                    </table>
+                </div>
+            {{pass}}
+        </div>
+    </div>
+
+    <!-- Communication Guide -->
+    <div class="card mt-4 bg-light">
+        <div class="card-body">
+            <h6><i class="fas fa-book"></i> Using the Messaging System</h6>
+            <div class="row small">
+                <div class="col-md-6">
+                    <strong>When to Send info_flyers:</strong>
+                    <ul class="mb-2">
+                        <li>Share important updates or announcements</li>
+                        <li>Coordinate meetings or payment timing</li>
+                        <li>Share information about programs or resources</li>
+                        <li>Ask for feedback or information</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <strong>Response Templates:</strong>
+                    <ul class="mb-0">
+                        <li><strong>No Response:</strong> For informational info_flyers</li>
+                        <li><strong>Mark as Read:</strong> Confirm borrowers saw it</li>
+                        <li><strong>Accept/Decline:</strong> For offers or invitations</li>
+                        <li><strong>Text Response:</strong> For questions or feedback</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    .btn-block {
+        padding: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .badge {
+        padding: 0.4rem 0.6rem;
+        font-weight: 600;
+    }
+    
+    .bg-orange {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .table-warning {
+        background-color: #fff3cd;
+    }
+    
+    @media (max-width: 768px) {
+        .text-right {
+            text-align: left !important;
+            margin-top: 1rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismiss flash info_flyers after 5 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut('slow');
+    }, 5000);
+});
+</script>

@@ -1,0 +1,112 @@
+{{extend 'layout.html'}}
+<script>
+    alert("save 1");
+</script>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">✓ Flyer Saved Successfully!</h4>
+                </div>
+                <div class="card-body">
+                    {{if flyer:}}
+                    <h5>{{=flyer.title}}</h5>
+                    <p class="text-muted">
+                        Saved on {{=flyer.updated_on.strftime('%B %d, %Y at %I:%M %p')}}
+                    </p>
+                    
+                    <hr>
+                    
+                    <h6>What would you like to do next?</h6>
+                    
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="{{=URL('preview', args=[flyer.id])}}" 
+                           class="btn btn-primary btn-lg">
+                            📄 Preview Flyer
+                        </a>
+                        
+                        <a href="{{=URL('editor', args=[flyer.id])}}" 
+                           class="btn btn-secondary">
+                            ✏️ Continue Editing
+                        </a>
+                        
+                        <a href="{{=URL('flyer', args=[flyer.id])}}" 
+                           class="btn btn-info" target="_blank">
+                            🌐 View Public Page
+                        </a>
+                        
+                        <a href="{{=URL('qr', args=[flyer.id])}}" 
+                           class="btn btn-success" target="_blank">
+                            📱 Get QR Code
+                        </a>
+                        
+                        <a href="{{=URL('editor')}}" 
+                           class="btn btn-outline-primary">
+                            ➕ Create New Flyer
+                        </a>
+                    </div>
+                    
+                    <hr class="mt-4">
+                    
+                    <div class="alert alert-light">
+                        <h6>Share Links:</h6>
+                        <p class="mb-1"><strong>Public Flyer:</strong></p>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control font-monospace small" 
+                                   value="{{=URL('flyer', args=[flyer.id], scheme=True, host=True)}}" 
+                                   id="flyerUrl" readonly>
+                            <button class="btn btn-outline-secondary" type="button" 
+                                    onclick="copyToClipboard('flyerUrl')">
+                                Copy
+                            </button>
+                        </div>
+                        
+                        <p class="mb-1 mt-3"><strong>QR Code:</strong></p>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace small" 
+                                   value="{{=URL('qr', args=[flyer.id], scheme=True, host=True)}}" 
+                                   id="qrUrl" readonly>
+                            <button class="btn btn-outline-secondary" type="button" 
+                                    onclick="copyToClipboard('qrUrl')">
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                    {{else:}}
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> Flyer data not found.
+                    </div>
+                    <a href="{{=URL('editor')}}" class="btn btn-primary">Back to Editor</a>
+                    {{pass}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard(elementId) {
+    const input = document.getElementById(elementId);
+    input.select();
+    input.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        // Show feedback
+        const button = input.nextElementSibling;
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+    } catch (err) {
+        alert('Failed to copy. Please copy manually.');
+    }
+}
+</script>

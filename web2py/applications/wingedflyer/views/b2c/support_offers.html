@@ -1,0 +1,322 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Support Offers from Your MFI</h2>
+            <p class="text-muted">Review and respond to offers of support</p>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{{=URL('dashboard')}}" class="btn btn-secondary">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {{if session.flash:}}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{=session.flash}}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {{pass}}
+
+    <!-- Explanation -->
+    <div class="alert alert-info">
+        <h5><i class="fas fa-hand-holding-heart"></i> About Support Offers</h5>
+        <p class="mb-2">When your MFI sees signals that suggest they might be able to help, they create <strong>support offers</strong>. These are <strong>not commands or requirements</strong> – they are offers you can:</p>
+        <ul class="mb-2">
+            <li><i class="fas fa-check-circle text-success"></i> <strong>Accept</strong> if the offer helps you</li>
+            <li><i class="fas fa-times-circle text-danger"></i> <strong>Decline</strong> if it doesn't fit your needs</li>
+            <li><i class="fas fa-edit text-warning"></i> <strong>Request modification</strong> if you'd like something different</li>
+        </ul>
+        <p class="mb-0"><small><i class="fas fa-shield-alt"></i> <strong>Your autonomy is protected:</strong> Your MFI cannot act on your signals without your consent. You remain in control.</small></p>
+    </div>
+
+    <!-- Pending Offers -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-clock"></i> Pending Offers
+                {{if len(pending) > 0:}}
+                    <span class="badge bg-danger">{{=len(pending)}}</span>
+                {{pass}}
+            </h5>
+        </div>
+        <div class="card-body">
+            {{if pending:}}
+                <p class="text-muted mb-3">These offers are waiting for your response:</p>
+                <div class="list-group">
+                    {{for offer in pending:}}
+                    <div class="list-group-item list-group-item-warning">
+                        <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">
+                                <span class="badge bg-primary">{{=offer.offer_type.replace('_', ' ').title()}}</span>
+                            </h6>
+                            <small class="text-muted">{{=offer.created_on.strftime('%Y-%m-%d %H:%M')}}</small>
+                        </div>
+
+                        <div class="alert alert-light mb-2">
+                            <strong>What your MFI is offering:</strong>
+                            <p class="mb-0 mt-2">{{=offer.offer_text}}</p>
+                        </div>
+
+                        {{if offer.trigger_signal:}}
+                            <p class="mb-2"><small class="text-muted"><i class="fas fa-info-circle"></i> <strong>Context:</strong> {{=offer.trigger_signal}}</small></p>
+                        {{pass}}
+
+                        <div class="mt-3">
+                            <a href="{{=URL('respond_offer', args=[offer.id])}}" class="btn btn-primary">
+                                <i class="fas fa-reply"></i> Respond to This Offer
+                            </a>
+                        </div>
+                    </div>
+                    {{pass}}
+                </div>
+            {{else:}}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5>No Pending Offers</h5>
+                    <p class="text-muted">You don't have any offers waiting for your response right now.</p>
+                </div>
+            {{pass}}
+        </div>
+    </div>
+
+    <!-- Responded Offers -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-check-double"></i> Your Recent Responses</h5>
+        </div>
+        <div class="card-body">
+            {{if responded:}}
+                <p class="text-muted mb-3">Here's how you've responded to recent offers:</p>
+                <div class="list-group">
+                    {{for offer in responded:}}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">
+                                <span class="badge bg-secondary">{{=offer.offer_type.replace('_', ' ').title()}}</span>
+                            </h6>
+                            <div class="text-end">
+                                <small class="text-muted d-block">Offered: {{=offer.created_on.strftime('%Y-%m-%d')}}</small>
+                                <small class="text-muted d-block">Responded: {{=offer.responded_on.strftime('%Y-%m-%d')}}</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <strong>The Offer:</strong>
+                            <p class="mb-0">{{=offer.offer_text}}</p>
+                        </div>
+
+                        <div class="mt-2">
+                            <strong>Your Response:</strong>
+                            <span class="badge {{='bg-success' if offer.borrower_response == 'ACCEPTED' else ('bg-danger' if offer.borrower_response == 'DECLINED' else 'bg-info')}} ms-2">
+                                {{=offer.borrower_response}}
+                            </span>
+                        </div>
+
+                        {{if offer.borrower_note:}}
+                            <div class="alert alert-light mt-2 mb-0">
+                                <strong>Your note:</strong>
+                                <p class="mb-0">{{=offer.borrower_note}}</p>
+                            </div>
+                        {{pass}}
+                    </div>
+                    {{pass}}
+                </div>
+            {{else:}}
+                <div class="text-center py-4">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <h5>No Response History Yet</h5>
+                    <p class="text-muted">When you respond to offers, they'll appear here.</p>
+                </div>
+            {{pass}}
+        </div>
+    </div>
+
+    <!-- Understanding Offer Types -->
+    <div class="card border-info mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-book"></i> Understanding Different Types of Support</h5>
+        </div>
+        <div class="card-body">
+            <p class="mb-3">Your MFI can offer five types of support. Here's what each one means:</p>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 border-primary">
+                        <div class="card-body">
+                            <h6><span class="badge bg-primary mb-2">1. Adjust Payment Timing</span></h6>
+                            <p class="mb-2"><strong>What it is:</strong> Coordination help</p>
+                            <p class="small mb-0"><strong>Examples:</strong> Change payment dates to match your market schedule, adjust meeting times, fix administrative issues that are making it harder to pay on time</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 border-primary">
+                        <div class="card-body">
+                            <h6><span class="badge bg-primary mb-2">2. Share Information</span></h6>
+                            <p class="mb-2"><strong>What it is:</strong> Information you might not know about</p>
+                            <p class="small mb-0"><strong>Examples:</strong> Tell you about cooperative buying programs, repair networks, market contacts, government programs, or resources that could help your work</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 border-primary">
+                        <div class="card-body">
+                            <h6><span class="badge bg-primary mb-2">3. Offer Restructuring</span></h6>
+                            <p class="mb-2"><strong>What it is:</strong> Response to external shocks</p>
+                            <p class="small mb-0"><strong>Examples:</strong> Payment restructuring after weather events damage your crops, family emergencies, supply chain disruptions, or other external problems you didn't cause</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 border-primary">
+                        <div class="card-body">
+                            <h6><span class="badge bg-primary mb-2">4. Facilitate Service Access</span></h6>
+                            <p class="mb-2"><strong>What it is:</strong> Connections to other services</p>
+                            <p class="small mb-0"><strong>Examples:</strong> Connect you to business training, insurance programs, equipment rental services, or other complementary services that could help your work</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-12 mb-3">
+                    <div class="card h-100 border-primary">
+                        <div class="card-body">
+                            <h6><span class="badge bg-primary mb-2">5. Request Conversation</span></h6>
+                            <p class="mb-2"><strong>What it is:</strong> For complex situations needing dialogue</p>
+                            <p class="small mb-0"><strong>Examples:</strong> Request to discuss challenges you're facing, plan for upcoming changes in your work, understand constraints, or talk through complex situations. <em>This is still your choice—you can decline the conversation request.</em></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-light mb-0 mt-3">
+                <small><i class="fas fa-info-circle"></i> <strong>Important:</strong> Your MFI is <em>limited</em> to these five types of support. They cannot intervene in other aspects of your work or make unilateral decisions about your loan based on your signals.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- What MFIs Cannot Do -->
+    <div class="card bg-light border-danger">
+        <div class="card-body">
+            <h6><i class="fas fa-shield-alt text-danger"></i> Your Protections: What Your MFI Cannot Do</h6>
+            <p class="mb-2"><strong>Your MFI is NOT allowed to:</strong></p>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="small mb-2">
+                        <li><i class="fas fa-times text-danger"></i> Judge your work effort or discipline based on your signals</li>
+                        <li><i class="fas fa-times text-danger"></i> Make moral judgments about how you spend your time or run your business</li>
+                        <li><i class="fas fa-times text-danger"></i> Penalize you for signaling that things went "worse than expected"</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="small mb-2">
+                        <li><i class="fas fa-times text-danger"></i> Adjust your loan terms without offering you options first</li>
+                        <li><i class="fas fa-times text-danger"></i> Act on your signals without your consent</li>
+                        <li><i class="fas fa-times text-danger"></i> Require you to explain or justify your personal or family decisions</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="alert alert-info mb-0 mt-3">
+                <small><i class="fas fa-balance-scale"></i> <strong>The design principle:</strong> The signal system exists to enable <strong>coordination and support</strong>, not supervision or control. Your MFI can see what you're signaling and can <em>offer</em> help, but they cannot <em>impose</em> actions. You remain autonomous in all your decisions.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- How to Respond -->
+    <div class="card mt-4 bg-light">
+        <div class="card-body">
+            <h6><i class="fas fa-question-circle"></i> How Should I Respond to Offers?</h6>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="p-3 border rounded h-100">
+                        <h6 class="text-success"><i class="fas fa-check-circle"></i> Accept</h6>
+                        <p class="small mb-0">Choose this if the offer genuinely helps you and you want to take them up on it. The MFI will then coordinate with you to implement the support.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="p-3 border rounded h-100">
+                        <h6 class="text-danger"><i class="fas fa-times-circle"></i> Decline</h6>
+                        <p class="small mb-0">Choose this if the offer doesn't fit your needs, you've already handled the situation, or you prefer to manage it yourself. There's no penalty for declining.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="p-3 border rounded h-100">
+                        <h6 class="text-warning"><i class="fas fa-edit"></i> Request Modification</h6>
+                        <p class="small mb-0">Choose this if the offer is close but not quite right. Explain what would work better for you, and your MFI can adjust the offer.</p>
+                    </div>
+                </div>
+            </div>
+            <p class="mb-0 mt-2"><small class="text-muted"><strong>Remember:</strong> You can always add a note explaining your response. This helps your MFI understand your situation better and offer more relevant support in the future.</small></p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .list-group-item {
+        border-left: 4px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .list-group-item-warning {
+        border-left-color: #ffc107;
+        background-color: #fff8e6;
+    }
+
+    .list-group-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        font-weight: 600;
+    }
+
+    .card.border-primary {
+        border-width: 2px;
+    }
+
+    .card.border-danger {
+        border-width: 2px;
+    }
+
+    .card.border-info {
+        border-width: 2px;
+    }
+
+    @media (max-width: 768px) {
+        .text-right {
+            text-align: left !important;
+            margin-top: 1rem;
+        }
+
+        .text-end {
+            text-align: left !important;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismiss flash messages
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert-success.alert-dismissible');
+        alerts.forEach(function(alert) {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 500);
+        });
+    }, 4000);
+});
+</script>

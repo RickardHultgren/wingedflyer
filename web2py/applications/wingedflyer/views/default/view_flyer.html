@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{=flyer.title}} - WingedFlyer</title>
+    <meta name="description" content="{{=flyer.thecontent[:150]}}...">
+    
+    <!-- Optimize for mobile & low bandwidth -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" 
+          rel="stylesheet">
+    
+<style>
+#content {
+    width: 50vw;
+    min-width: 350px;
+    /* Horizontally centers the block element */
+    margin-left: auto;
+    margin-right: auto;
+    /* The original vertical margin can be kept */
+    margin-top: calc(2em + 2vw);
+    margin-bottom: calc(2em + 2vw);
+    /* Shorthand for margins (if you want to apply the same vertical margin): */
+    /* margin: calc(2em + 2vw) auto; */
+    text-align: left; /* Keeps the text left-aligned inside the centered div */
+}
+
+.body-text {
+    overflow-x: auto;
+    font-size: 3em; 
+}
+
+.rendered-content pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+}
+
+.rendered-content blockquote {
+    margin: clamp(0.85rem, 2.2vw, 1rem) 0;
+    padding: clamp(0.85rem, 2.2vw, 1rem) clamp(1.25rem, 3.5vw, 1.5rem);
+    background: var(--color-bg-light);
+    border-left: clamp(3px, 0.8vw, 4px) solid var(--color-primary);
+    border-radius: 0 clamp(6px, 1.5vw, 8px) clamp(6px, 1.5vw, 8px) 0;
+    font-style: italic;
+    color: #4a5568;
+}
+
+.rendered-content ul, .rendered-content ol {
+    margin: clamp(0.4rem, 1.2vw, 0.5rem) 0;
+    padding-left: clamp(1.25rem, 3.5vw, 1.5rem);
+}
+
+.rendered-content li {
+    margin-bottom: clamp(0.4rem, 1.2vw, 0.5rem);
+}
+
+.rendered-content a {
+    color: var(--color-primary);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.rendered-content a:hover {
+    border-bottom-color: var(--color-primary);
+}
+
+.rendered-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: clamp(0.85rem, 2.2vw, 1rem) 0;
+}
+
+.rendered-content th, .rendered-content td {
+    padding: clamp(0.6rem, 1.7vw, 0.75rem);
+    border: 1px solid #e2e8f0;
+    text-align: left;
+}
+
+.rendered-content th {
+    background: var(--color-bg-light);
+    font-weight: 600;
+}
+
+.preview-info {
+    background: #e6fffa;
+    border-left: clamp(3px, 0.8vw, 4px) solid #38b2ac;
+    padding: clamp(0.85rem, 2.2vw, 1rem);
+    border-radius: clamp(6px, 1.5vw, 8px);
+    margin-top: clamp(1.5rem, 4vw, 2rem);
+}
+
+.preview-info h6 {
+    color: #2c7a7b;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    /* Fluid h6: 0.95rem → 1rem */
+    font-size: clamp(0.95rem, 2.1vw, 1rem);
+}
+
+.preview-info p {
+    margin: 0;
+    color: #234e52;
+    /* Fluid: 0.85rem → 0.9rem */
+    font-size: clamp(0.85rem, 1.9vw, 0.9rem);
+}
+
+/* Small mobile adjustments */
+@media (max-width: 768px) {
+    .preview-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .preview-title-section {
+        width: 100%;
+    }
+    
+    .preview-actions {
+        width: 100%;
+    }
+    
+    .preview-btn {
+        flex: 1;
+        justify-content: center;
+        min-width: 0;
+    }
+    
+    .preview-mode-toggle {
+        flex-direction: column;
+    }
+    
+    .mode-btn {
+        width: 100%;
+    }
+    
+    .mobile-preview {
+        border: none;
+        padding: 0;
+        box-shadow: none;
+    }
+}
+
+@media (max-width: 400px) {
+    .preview-actions {
+        flex-direction: column;
+    }
+    
+    .preview-btn {
+        width: 100%;
+    }
+}
+</style>
+
+          
+    </head>
+<body>
+<!-- Header -->
+<div id="content">
+    <h2>📄 {{=b2c.title}}</h2>
+    <div class="preview-meta">
+            Last updated: {{=b2c.updated_on.strftime('%B %d, %Y at %I:%M %p')}} • 
+            Views: {{=b2c.view_count or 0}}
+    </div>
+    
+    
+
+
+    <div class="body-text">
+                    {{=XML(html_content)}}
+    </div>
+
+    <div class="preview-actions">
+        <!--a href="{{=URL('view_flyer', args=[flyer.id])}}" 
+            class="preview-btn btn-public" target="_blank"><button>
+                🌐 Public View
+                </button>
+        </a-->
+        <a href="{{=URL('qr', args=[flyer.id])}}" 
+            class="preview-btn btn-qr" target="_blank"> <button>
+                📱 QR Code
+                </button>
+        </a>
+        <br>
+        <br>
+        {{if not b2c.is_logged_in():#auth.is_logged_in():}}
+        <a href="{{=URL('editor', args=[flyer.id])}}" class="preview-btn btn-edit">
+                <button>
+                Your Library
+                </button>
+        </a>
+        {{pass}}
+
+        <p>
+                Powered by <strong style="color: #667eea;">WingedFlyer</strong> 🕊️ 
+                - Making information fly to your customers
+        </p>
+
+    </div>
+</div>
+<script>
+        // Share functionality (uses Web Share API if available)
+        async function shareFlyer() {
+            const shareData = {
+                title: "{{=b2c.title.replace("'", "\\'")}}",
+                text: "Check out this flyer: {{=b2c.title.replace("'", "\\'")}}",
+                url: window.location.href
+            };
+
+            try {
+                if (navigator.share) {
+                    // Mobile share
+                    await navigator.share(shareData);
+                } else {
+                    // Fallback: copy to clipboard
+                    await navigator.clipboard.writeText(window.location.href);
+                    alert('✅ Link copied to clipboard!');
+                }
+            } catch (err) {
+                // Final fallback
+                prompt('Copy this link:', window.location.href);
+            }
+        }
+</script>
+</body>
+</html>

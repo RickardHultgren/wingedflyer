@@ -1,0 +1,11 @@
+<h2>Registered MFIs</h2>
+
+<ul>
+{{ for row in mfis: }}
+    <li>
+        <a href="{{=URL('edit', args=row.id)}}">
+            {{=row.name}} ({{=row.username}})
+        </a>
+    </li>
+{{ pass }}
+</ul>

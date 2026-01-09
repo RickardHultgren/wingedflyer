@@ -1,0 +1,158 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Welcome, {{=borrower.real_name}}!</h2>
+            <p class="text-muted">Managed by: {{=mfi.name}}</p>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{{=URL('logout')}}" class="btn btn-secondary">Logout</a>
+        </div>
+    </div>
+
+    {{if session.flash:}}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        {{=session.flash}}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {{pass}}
+
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">💰 Financial Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <h3>{{='%.2f' % (borrower.amount_borrowed or 0)}}</h3>
+                    <p class="text-muted">Amount Borrowed</p>
+                </div>
+                <div class="col-md-4">
+                    <h3>{{='%.2f' % (borrower.amount_repaid_b2c_reported or 0)}}</h3>
+                    <p class="text-muted">Amount Repaid</p>
+                </div>
+                <div class="col-md-4">
+                    <h3 class="{{='text-danger' if balance > 0 else 'text-success'}}">
+                        {{='%.2f' % balance}}
+                    </h3>
+                    <p class="text-muted">Outstanding Balance</p>
+                </div>
+            </div>
+            {{if borrower.amount_borrowed > 0:}}
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar bg-success" role="progressbar"
+                     style="width: {{='%.1f' % repayment_percentage}}%">
+                    {{='%.1f' % repayment_percentage}}% Repaid
+                </div>
+            </div>
+            {{pass}}
+            <div class="text-center mt-3">
+                <a href="{{=URL('finances')}}" class="btn btn-outline-success">
+                    View Full Financial Details
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">✉️ Inbox</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p>Check updates and messages from your MFI.</p>
+                    <a href="{{=URL('messages')}}" class="btn btn-info text-white position-relative">
+                        View My Messages
+                        {{if unread_count > 0:}}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{=unread_count}}
+                        </span>
+                        {{pass}}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4 border-primary">
+                <div class="card-header bg-light border-primary text-primary">
+                    <h5 class="mb-0">📝 Personal Flyer</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p>Create or update your public profile flyer.</p>
+                    <a href="{{=URL('editor')}}" class="btn btn-primary">
+                        Open Flyer Editor
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">📊 My Work Activities & Signals</h5>
+        </div>
+        <div class="card-body">
+            {{if len(work_activities) == 0:}}
+                <div class="alert alert-info">
+                    <h6>Get Started</h6>
+                    <p>You haven't defined any work activities yet.</p>
+                    <a href="{{=URL('my_activities')}}" class="btn btn-primary">Define My Activities</a>
+                </div>
+            {{else:}}
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-2">
+                        <a href="{{=URL('daily_signal')}}" class="btn btn-success btn-block w-100">Record Today's Signals</a>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <a href="{{=URL('my_activities')}}" class="btn btn-outline-primary btn-block w-100">Manage Activities</a>
+                    </div>
+                </div>
+
+                {{if recent_signals:}}
+                    <hr>
+                    <h6>Recent Signals (Last 7 Days)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Outcome</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{for signal in recent_signals:}}
+                                <tr>
+                                    <td>{{=signal.signal_date.strftime('%Y-%m-%d')}}</td>
+                                    <td>
+                                        {{if signal.outcome == 'BETTER':}}
+                                            <span class="badge bg-success">Better</span>
+                                        {{elif signal.outcome == 'AS_EXPECTED':}}
+                                            <span class="badge bg-secondary">As Expected</span>
+                                        {{else:}}
+                                            <span class="badge bg-warning text-dark">Worse</span>
+                                        {{pass}}
+                                    </td>
+                                    <td><small>{{=signal.note or '-'}}</small></td>
+                                </tr>
+                                {{pass}}
+                            </tbody>
+                        </table>
+                    </div>
+                {{pass}}
+            {{pass}}
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .card { box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .progress { font-weight: bold; }
+    .text-right { text-align: right; }
+    .btn-block { display: block; }
+    @media (max-width: 768px) { .text-right { text-align: left; } }
+</style>

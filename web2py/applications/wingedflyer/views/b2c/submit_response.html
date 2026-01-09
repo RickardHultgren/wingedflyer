@@ -1,0 +1,85 @@
+{{extend 'layout.html'}}
+
+<div class="container" style="max-width: 800px; margin-top: 20px;">
+    
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{=URL('dashboard')}}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{=URL('messages')}}">Messages</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Respond</li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0">
+                <i class="fa fa-reply"></i> Submit Response
+            </h3>
+        </div>
+        
+        <div class="card-body">
+            <div class="alert alert-secondary">
+                <h5><strong>Subject:</strong> {{=info_flyer.subject}}</h5>
+                <p class="mb-0 text-muted">
+                    <small>From: {{=mfi.name if mfi else "Your MFI"}}</small>
+                </p>
+                <hr>
+                <div class="message-preview" style="max-height: 150px; overflow-y: auto;">
+                    {{=MARKMIN(info_flyer.info_flyer_text)}}
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="response-section">
+                <h4>Your Response</h4>
+                
+                {{if recipient.response:}}
+                    <div class="alert alert-info">
+                        <strong>You submitted:</strong><br>
+                        {{=recipient.response}}
+                        <p class="mt-2 mb-0 small">Submitted on: {{=recipient.responded_on.strftime('%Y-%m-%d %H:%M') if recipient.responded_on else ''}}</p>
+                    </div>
+                    <a href="{{=URL('messages')}}" class="btn btn-outline-secondary">Back to Messages</a>
+                
+                {{else:}}
+                    <div id="response-form-wrapper">
+                        {{=form.custom.begin}}
+                        
+                        {{if info_flyer.response_template == 'ACCEPT_DECLINE':}}
+                            <div class="form-group">
+                                <label>How do you wish to proceed?</label>
+                                {{=form.custom.widget.response}}
+                            </div>
+                        
+                        {{elif info_flyer.response_template == 'TEXT_RESPONSE':}}
+                            <div class="form-group">
+                                <label>Your message to the MFI:</label>
+                                {{=form.custom.widget.response}}
+                            </div>
+                        {{pass}}
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                Send Response
+                            </button>
+                            <a href="{{=URL('messages')}}" class="btn btn-link text-muted">Cancel</a>
+                        </div>
+                        
+                        {{=form.custom.end}}
+                    </div>
+                {{pass}}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control { width: 100%; padding: 10px; border-radius: 5px; }
+    textarea.form-control { min-height: 120px; }
+    .breadcrumb { background: transparent; padding-left: 0; }
+</style>

@@ -1,0 +1,338 @@
+{{extend 'layout.html'}}
+
+<style>
+    .preview-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+    
+    .preview-header {
+        background: white;
+        padding: 1rem;
+        border-radius: 12px 12px 0 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border-bottom: 3px solid #667eea;
+    }
+    
+    .preview-title-section h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1.5rem;
+        color: #2d3748;
+        font-weight: 700;
+        line-height: 1.3;
+        word-wrap: break-word;
+    }
+    
+    .preview-meta {
+        font-size: 0.8rem;
+        color: #718096;
+        margin-top: 0.25rem;
+        line-height: 1.5;
+    }
+    
+    .preview-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    
+    .preview-btn {
+        padding: 0.875rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: transform 0.15s, box-shadow 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: none;
+        cursor: pointer;
+        min-height: 44px;
+        width: 100%;
+    }
+    
+    .btn-edit {
+        background: #718096;
+        color: white;
+    }
+    
+    .btn-edit:hover, .btn-edit:active {
+        background: #4a5568;
+        color: white;
+        transform: scale(0.98);
+    }
+    
+    .btn-public {
+        background: #667eea;
+        color: white;
+    }
+    
+    .btn-public:hover, .btn-public:active {
+        background: #5a67d8;
+        color: white;
+        transform: scale(0.98);
+    }
+    
+    .btn-qr {
+        background: #48bb78;
+        color: white;
+    }
+    
+    .btn-qr:hover, .btn-qr:active {
+        background: #38a169;
+        color: white;
+        transform: scale(0.98);
+    }
+    
+    .preview-body {
+        background: white;
+        padding: 1.5rem 1rem;
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 2rem;
+    }
+    
+    .rendered-content {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: #2d3748;
+        overflow-wrap: break-word;
+    }
+    
+    .rendered-content h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 1.5rem 0 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid #667eea;
+        color: #1a202c;
+        line-height: 1.2;
+    }
+    
+    .rendered-content h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 1.25rem 0 0.75rem;
+        color: #2d3748;
+        line-height: 1.3;
+    }
+    
+    .rendered-content h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 1rem 0 0.5rem;
+        color: #4a5568;
+        line-height: 1.3;
+    }
+    
+    .rendered-content p {
+        margin: 0 0 1rem;
+        line-height: 1.7;
+    }
+    
+    .rendered-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        display: block;
+    }
+    
+    .rendered-content code {
+        background: #edf2f7;
+        color: #e53e3e;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-family: 'Courier New', monospace;
+        word-break: break-all;
+    }
+    
+    .rendered-content pre {
+        background: #2d3748;
+        color: #e2e8f0;
+        padding: 0.75rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 1rem 0;
+        font-size: 0.85rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .rendered-content pre code {
+        background: none;
+        color: inherit;
+        padding: 0;
+        word-break: normal;
+    }
+    
+    .rendered-content blockquote {
+        margin: 1rem 0;
+        padding: 0.75rem 1rem;
+        background: #f7fafc;
+        border-left: 4px solid #667eea;
+        border-radius: 0 8px 8px 0;
+        font-style: italic;
+        color: #4a5568;
+        font-size: 0.95rem;
+    }
+    
+    .rendered-content ul, 
+    .rendered-content ol {
+        margin: 0.5rem 0;
+        padding-left: 1.5rem;
+    }
+    
+    .rendered-content li {
+        margin-bottom: 0.5rem;
+        line-height: 1.6;
+    }
+    
+    .rendered-content a {
+        color: #667eea;
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.2s;
+    }
+    
+    .rendered-content a:hover, 
+    .rendered-content a:active {
+        border-bottom-color: #667eea;
+        background: rgba(102, 126, 234, 0.1);
+    }
+    
+    .rendered-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        font-size: 0.85rem;
+    }
+    
+    .rendered-content th, 
+    .rendered-content td {
+        padding: 0.5rem;
+        border: 1px solid #e2e8f0;
+        text-align: left;
+        white-space: nowrap;
+    }
+    
+    .rendered-content th {
+        background: #f7fafc;
+        font-weight: 600;
+    }
+    
+    .preview-footer-note {
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+        text-align: center;
+        color: #718096;
+        font-size: 0.9rem;
+    }
+    
+    @media (min-width: 576px) {
+        .preview-container {
+            padding: 1.5rem;
+        }
+        
+        .preview-header {
+            padding: 1.5rem;
+        }
+        
+        .preview-title-section h2 {
+            font-size: 1.75rem;
+        }
+        
+        .preview-actions {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+        
+        .preview-btn {
+            flex: 1 1 calc(33.33% - 0.5rem);
+            min-width: 140px;
+        }
+        
+        .preview-body {
+            padding: 2rem 1.5rem;
+        }
+    }
+    
+    @media (min-width: 992px) {
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        
+        .preview-actions {
+            margin-top: 0;
+            flex-wrap: nowrap;
+        }
+        
+        .preview-btn {
+            flex: 0 1 auto;
+            width: auto;
+            padding: 0.75rem 1.25rem;
+        }
+        
+        .preview-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+    }
+</style>
+
+<div class="preview-container">
+    {{if session.flash:}}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        {{=session.flash}}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {{pass}}
+
+    <div class="preview-header">
+        <div class="preview-title-section">
+            <h2>📄 {{=flyer.title}}</h2>
+            <div class="preview-meta">
+                Last updated: {{=flyer.updated_on.strftime('%B %d, %Y at %I:%M %p')}} • 
+                Views: {{=flyer.view_count or 0}}
+            </div>
+        </div>
+        
+        <div class="preview-actions">
+            <a href="{{=URL('editor', args=[flyer.id])}}" class="preview-btn btn-edit">
+                ✏️ Edit
+            </a>
+            <a href="{{=URL('view_flyer', args=[flyer.id])}}" 
+               class="preview-btn btn-public" target="_blank">
+                🌐 Public View
+            </a>
+            <a href="{{=URL('qr', args=[flyer.id])}}" 
+               class="preview-btn btn-qr" target="_blank">
+                📱 QR Code
+            </a>
+        </div>
+    </div>
+
+    <div class="preview-body">
+        <div class="rendered-content">
+            {{=XML(html_content)}}
+        </div>
+        
+        <div class="preview-footer-note">
+            <p>
+                This is how your flyer will appear to viewers. Use the buttons above to edit, view publicly, or generate a QR code.
+            </p>
+        </div>
+    </div>
+</div>
