@@ -17,55 +17,148 @@ auth = Auth(db)
 auth.define_tables(username=True, signature=False)
 
 ############################################################
-# 1. MFI TABLE
+# 0. CONTEXT SYSTEM
 ############################################################
+# A context represents the operational domain (microfinance, coaching, internal org)
+# in which the mechanics are applied. This allows the same system to serve
+# different use cases with different language and rules, without duplicating logic.
 
 db.define_table(
-    'mfi',
+    'context',
+    Field('context_key', 'string', unique=True, notnull=True,
+          comment='Unique identifier for this context (e.g. "microfinance", "coaching", "internal_org")'),
+    Field('display_name', 'string', notnull=True,
+          comment='Human-readable name for this context'),
+    Field('description', 'text',
+          comment='Description of what this context represents'),
+    Field('is_active', 'boolean', default=True,
+          comment='Whether this context is currently active'),
+    Field('config_json', 'json',
+          comment='Context-specific configuration (e.g. participant limits, payment cycles)'),
+    Field('created_on', 'datetime', default=request.now, writable=False),
+    Field('updated_on', 'datetime', update=request.now, writable=False),
+    format='%(display_name)s'
+)
+
+db.context.context_key.requires = [
+    IS_NOT_EMPTY(),
+    IS_NOT_IN_DB(db, 'context.context_key'),
+    IS_SLUG(error_message='Must be lowercase alphanumeric with underscores only')
+]
+db.context.display_name.requires = IS_NOT_EMPTY()
+
+############################################################
+# 0.1 FEATURE LANGUAGE MAPPING
+############################################################
+# This table maps mechanic-level feature keys to context-specific language.
+# It allows the same feature to be displayed differently across contexts
+# without hardcoding strings in views or controllers.
+#
+# Example usage:
+# - feature_key='instruction', context='microfinance', variant='label' → 'Bank Message'
+# - feature_key='instruction', context='coaching', variant='label' → 'Coach Check-in'
+# - feature_key='participant', context='microfinance', variant='label_plural' → 'Borrowers'
+
+db.define_table(
+    'feature_language',
+    Field('context_id', 'reference context', notnull=True,
+          comment='Which context this language applies to'),
+    Field('feature_key', 'string', notnull=True,
+          comment='The mechanic-level feature identifier (e.g. "instruction", "participant", "execution_signal")'),
+    Field('language_variant', 'string', notnull=True,
+          comment='Type of language string (e.g. "label", "label_plural", "description", "call_to_action")'),
+    Field('language_value', 'string', notnull=True,
+          comment='The actual text to display in this context'),
+    Field('created_on', 'datetime', default=request.now, writable=False),
+    Field('updated_on', 'datetime', update=request.now, writable=False)
+)
+
+# Ensure unique combinations of context + feature + variant
+db.feature_language.requires = IS_NOT_IN_DB(
+    db,
+    'feature_language.context_id AND feature_language.feature_key AND feature_language.language_variant',
+    error_message='This language mapping already exists'
+)
+
+# Index for fast lookups by context and feature
+db.executesql('CREATE INDEX IF NOT EXISTS idx_feature_language_lookup ON feature_language(context_id, feature_key, language_variant);')
+
+############################################################
+# 1. RESPONSIBLE TABLE (formerly MFI)
+############################################################
+# Represents the entity responsible for managing participants.
+# In microfinance: an MFI
+# In coaching: a coaching organization
+# In internal org: a department or team lead
+#
+# MIGRATION NOTE: Rename mfi → responsible, preserve all fields
+
+db.define_table(
+    'responsible',
+    Field('context_id', 'reference context', notnull=True,
+          comment='Which operational context this responsible entity belongs to'),
     Field('username', 'string', unique=True, notnull=True),
     Field('password_hash', 'password', readable=False, writable=True),
-    Field('name', 'string', notnull=True),
+    Field('name', 'string', notnull=True,
+          comment='Display name for this responsible entity'),
     Field('telephone', 'string'),
     Field('email', 'string'),
-    Field('contact_person', 'string'),
+    Field('contact_person', 'string',
+          comment='Primary contact within this organization'),
     Field('country', 'string'),
     Field('notes', 'text'),
-    Field('b2c_accounts', 'integer', default=0, 
-          comment='Maximum number of B2C accounts allowed'),
+    Field('participant_limit', 'integer', default=0,
+          comment='Maximum number of participants this responsible entity can manage. '
+                  'Renamed from b2c_accounts - mechanic is context-neutral'),
     Field('created_on', 'datetime', default=request.now, writable=False),
     format='%(name)s'
 )
 
 # Validators
-db.mfi.username.requires = [IS_NOT_EMPTY(), IS_NOT_IN_DB(db, 'mfi.username')]
-db.mfi.name.requires = IS_NOT_EMPTY()
-db.mfi.email.requires = IS_EMPTY_OR(IS_EMAIL())
-db.mfi.b2c_accounts.requires = IS_INT_IN_RANGE(0, 10000)
+db.responsible.username.requires = [IS_NOT_EMPTY(), IS_NOT_IN_DB(db, 'responsible.username')]
+db.responsible.name.requires = IS_NOT_EMPTY()
+db.responsible.email.requires = IS_EMPTY_OR(IS_EMAIL())
+db.responsible.participant_limit.requires = IS_INT_IN_RANGE(0, 10000)
 
-# Password Hashing Logic
+# Password Hashing Logic (preserved from original)
 def hash_password(pwd):
+    """Hash password using bcrypt if not already hashed"""
     if pwd and not pwd.startswith('$2b$'):
         return bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     return pwd
 
-#db.mfi._before_insert.append(lambda f: f.update(password_hash=hash_password(f.get('password_hash'))))
-
-def encrypt_mfi_password(row):
+def encrypt_responsible_password(row):
+    """Before insert: hash the password"""
     if 'password_hash' in row:
         row['password_hash'] = hash_password(row['password_hash'])
 
-db.mfi._before_insert.append(encrypt_mfi_password)
-
-# NEW/FIXED line 59
-db.mfi._before_update.append(lambda s, f: f.__setitem__('password_hash', hash_password(f.get('password_hash'))))
+db.responsible._before_insert.append(encrypt_responsible_password)
+db.responsible._before_update.append(lambda s, f: f.__setitem__('password_hash', hash_password(f.get('password_hash'))))
 
 ############################################################
-# 2. BORROWER TABLE
+# 2. PARTICIPANT TABLE (formerly B2C/BORROWER)
 ############################################################
+# Represents individuals being tracked/supported by the responsible entity.
+# In microfinance: borrowers
+# In coaching: clients/coachees
+# In internal org: team members
+#
+# MIGRATION NOTE: Rename b2c → participant
+# Domain-specific fields (amount_borrowed, amount_repaid_b2c_reported) are preserved
+# but should be understood as context-specific metrics that can be repurposed:
+# - In coaching: could represent "goals achieved" vs "goals set"
+# - In internal org: could represent "tasks completed" vs "tasks assigned"
+#
+# FUTURE CONTEXT-AWARE LOGIC:
+# These fields should eventually be moved to a flexible metrics table
+# that allows different contexts to define their own tracked values
 
 db.define_table(
-    'b2c',
-    Field('mfi_id', 'reference mfi', notnull=True),
+    'participant',
+    Field('responsible_id', 'reference responsible', notnull=True,
+          comment='Which responsible entity manages this participant'),
+    Field('context_id', 'reference context', notnull=True,
+          comment='Which operational context this participant belongs to'),
     Field('username', 'string', unique=True),
     Field('password_hash', 'string'),
     Field('real_name', 'string'),
@@ -73,44 +166,73 @@ db.define_table(
     Field('telephone', 'string'),
     Field('email', 'string'),
     Field('social_media', 'string'),
-    Field('amount_borrowed', 'double', default=0),
-    Field('amount_repaid_b2c_reported', 'double', default=0),
+    
+    # CONTEXT-SPECIFIC METRICS (annotated for future refactoring)
+    # TODO: Move these to a generic participant_metrics table with flexible schema
+    # Current microfinance semantics preserved for migration compatibility
+    Field('amount_borrowed', 'double', default=0,
+          comment='CONTEXT-DEPENDENT: MFI=borrowed amount, Coaching=goal target, Internal=task allocation'),
+    Field('amount_repaid_b2c_reported', 'double', default=0,
+          comment='CONTEXT-DEPENDENT: MFI=repaid amount, Coaching=goal completion, Internal=task completion'),
+    
     Field('created_on', 'datetime', default=request.now, writable=False),
     Field('updated_on', 'datetime', update=request.now, writable=False),
     format='%(real_name)s'
 )
 
-db.b2c.username.requires = [IS_NOT_EMPTY(), IS_NOT_IN_DB(db, 'b2c.username')]
-db.b2c.real_name.requires = IS_NOT_EMPTY()
-db.b2c.email.requires = IS_EMPTY_OR(IS_EMAIL())
+db.participant.username.requires = [IS_NOT_EMPTY(), IS_NOT_IN_DB(db, 'participant.username')]
+db.participant.real_name.requires = IS_NOT_EMPTY()
+db.participant.email.requires = IS_EMPTY_OR(IS_EMAIL())
 
-def validate_b2c_limit(fields):
-    mfi_id = fields.get('mfi_id')
-    if mfi_id:
-        mfi = db.mfi(mfi_id)
-        current_count = db(db.b2c.mfi_id == mfi_id).count()
-        if current_count >= mfi.b2c_accounts:
-            # In a real app, use a custom validator instead of a hard exception
-            raise ValueError('MFI account limit reached')
+def validate_participant_limit(fields):
+    """
+    Enforce participant limit for responsible entity.
+    
+    CONTEXT-AWARE ANNOTATION:
+    This limit validation is mechanically sound across contexts:
+    - MFI: borrower account limits
+    - Coaching: client capacity limits
+    - Internal org: team size limits
+    
+    The mechanic stays the same; only the language changes.
+    Future: limit rules could be stored in context.config_json for per-context customization
+    """
+    responsible_id = fields.get('responsible_id')
+    if responsible_id:
+        responsible = db.responsible(responsible_id)
+        current_count = db(db.participant.responsible_id == responsible_id).count()
+        if current_count >= responsible.participant_limit:
+            # TODO: Make error message context-aware using feature_language table
+            raise ValueError('Participant limit reached for this responsible entity')
 
-db.b2c._before_insert.append(validate_b2c_limit)
-def encrypt_b2c_password(fields):
+db.participant._before_insert.append(validate_participant_limit)
+
+def encrypt_participant_password(fields):
+    """Before insert: hash the password"""
     if fields.get('password_hash'):
         fields['password_hash'] = hash_password(fields['password_hash'])
 
-db.b2c._before_insert.append(encrypt_b2c_password)
+db.participant._before_insert.append(encrypt_participant_password)
 
 ############################################################
-# 4. BORROWER DAILY SIGNALS (Schema Diagram Placeholder)
+# 3. WORK ACTIVITY
 ############################################################
-
-
+# Represents the activity/work being tracked for a participant.
+# In microfinance: business activity (e.g. "street vending")
+# In coaching: goal area (e.g. "fitness routine")
+# In internal org: project or responsibility (e.g. "Q1 deliverable")
+#
+# MIGRATION NOTE: Table name preserved as it's already mechanic-neutral
+# Added context_id for multi-context support
 
 db.define_table(
     'work_activity',
-    Field('b2c_id', 'reference b2c', ondelete='CASCADE', notnull=True),
-#    Field('b2c_id', 'reference b2c', notnull=True),
-    Field('activity_name', 'string', notnull=True),
+    Field('participant_id', 'reference participant', ondelete='CASCADE', notnull=True,
+          comment='Which participant this activity belongs to (renamed from b2c_id)'),
+    Field('context_id', 'reference context', notnull=True,
+          comment='Which operational context this activity exists in'),
+    Field('activity_name', 'string', notnull=True,
+          comment='Name of the activity/goal/project'),
     Field('description', 'text'),
     Field('is_active', 'boolean', default=True),
     Field('created_on', 'datetime', default=request.now),
@@ -118,25 +240,62 @@ db.define_table(
     format='%(activity_name)s'
 )
 
+############################################################
+# 4. EXECUTION SIGNAL (formerly DAILY_SIGNAL)
+############################################################
+# Represents a participant's self-reported signal about work execution.
+# In microfinance: daily business performance signal
+# In coaching: daily progress check-in
+# In internal org: daily standup update
+#
+# MIGRATION NOTE: Rename daily_signal → execution_signal
+# The "outcome" field is mechanically sound across contexts:
+# BETTER/AS_EXPECTED/WORSE works for business, goals, and task progress
+
 db.define_table(
-    'daily_signal',
-    Field('b2c_id', 'reference b2c', notnull=True),
-    Field('work_activity_id', 'reference work_activity', notnull=True),
-    Field('signal_date', 'date', notnull=True, default=request.now),
-    Field('outcome', 'string', notnull=True),
-    Field('note', 'text'),
+    'execution_signal',
+    Field('participant_id', 'reference participant', notnull=True,
+          comment='Which participant sent this signal (renamed from b2c_id)'),
+    Field('work_activity_id', 'reference work_activity', notnull=True,
+          comment='Which activity this signal relates to'),
+    Field('context_id', 'reference context', notnull=True,
+          comment='Which operational context this signal exists in'),
+    Field('signal_date', 'date', notnull=True, default=request.now,
+          comment='When this signal was recorded'),
+    Field('outcome', 'string', notnull=True,
+          comment='How execution compared to expectations: BETTER/AS_EXPECTED/WORSE'),
+    Field('note', 'text',
+          comment='Optional participant note about this signal'),
     Field('created_on', 'datetime', default=request.now)
 )
 
-db.daily_signal.outcome.requires = IS_IN_SET(['BETTER', 'AS_EXPECTED', 'WORSE'])
+db.execution_signal.outcome.requires = IS_IN_SET(['BETTER', 'AS_EXPECTED', 'WORSE'])
 
 ############################################################
-# 5. PAYMENT TRACKING
+# 5. PAYMENT TRACKING (Commented - Context-Specific)
 ############################################################
+# DESIGN NOTE: Payment tracking is currently microfinance-specific.
+# For multi-context support, this should become a generic "commitment_tracking" table
+# where commitments can represent:
+# - MFI: repayment schedules
+# - Coaching: milestone deadlines
+# - Internal org: deliverable due dates
+#
+# The mechanic is the same: track expected vs actual completion of commitments,
+# measure lateness, record completion method.
+#
+# FUTURE REFACTORING:
+# - Rename to 'commitment_tracking'
+# - Add context_id
+# - Rename 'amount' → 'commitment_value' (can be monetary, numerical, or boolean)
+# - Rename 'payment_method' → 'completion_method'
+# - Keep days_late calculation (universally applicable)
+
 '''
 db.define_table(
     'b2c_payment',
-    Field('b2c_id', 'reference b2c', notnull=True),
+    Field('participant_id', 'reference participant', notnull=True),  # Renamed from b2c_id
+    Field('context_id', 'reference context', notnull=True),  # Added for multi-context
     Field('amount', 'double', notnull=True),
     Field('due_date', 'date', notnull=True),
     Field('paid_date', 'date'),
@@ -147,11 +306,20 @@ db.define_table(
 )
 
 def calculate_days_late(fields):
-    # Ensure we are dealing with date objects
+    """
+    Calculate days late for commitment completion.
+    
+    CONTEXT-AWARE ANNOTATION:
+    This mechanic is universal - any context cares about:
+    - What was expected (due_date)
+    - What actually happened (paid_date / completion_date)
+    - How late it was (days_late)
+    
+    Language changes per context but logic stays identical.
+    """
     paid = fields.get('paid_date')
     due = fields.get('due_date')
     if paid and due:
-        # If web2py hasn't converted them to dates yet (e.g. from raw dicts)
         if isinstance(due, str): due = datetime.strptime(due, '%Y-%m-%d').date()
         if isinstance(paid, str): paid = datetime.strptime(paid, '%Y-%m-%d').date()
         
@@ -163,25 +331,41 @@ db.b2c_payment._before_update.append(lambda s, f: calculate_days_late(f))
 '''
 
 ############################################################
-# 7. MESSAGING SYSTEM
+# 6. INSTRUCTION SYSTEM (formerly MESSAGING)
 ############################################################
+# Represents instructions/messages sent from responsible entities to participants.
+# In microfinance: bank messages or payment reminders
+# In coaching: coach check-ins or motivational messages
+# In internal org: leadership signals or team announcements
+#
+# MIGRATION NOTE: Rename mfi_info_flyer → instruction
 
 db.define_table(
-    'mfi_info_flyer',
-    Field('mfi_id', 'reference mfi', notnull=True),
-    Field('subject', 'string', notnull=True),
-    Field('info_flyer_text', 'text', notnull=True),
-    Field('response_template', 'string', default='NONE'),
+    'instruction',
+    Field('responsible_id', 'reference responsible', notnull=True,
+          comment='Which responsible entity sent this instruction (renamed from mfi_id)'),
+    Field('context_id', 'reference context', notnull=True,
+          comment='Which operational context this instruction exists in'),
+    Field('subject', 'string', notnull=True,
+          comment='Subject line for this instruction'),
+    Field('instruction_text', 'text', notnull=True,
+          comment='Main content of the instruction (renamed from info_flyer_text)'),
+    Field('response_template', 'string', default='NONE',
+          comment='Expected response format (NONE, YES_NO, TEXT, etc.)'),
     Field('created_on', 'datetime', default=request.now),
-    Field('sent_by', 'string'),
+    Field('sent_by', 'string',
+          comment='Username or identifier of who sent this instruction'),
     format='%(subject)s'
 )
 
-
 db.define_table(
-    'info_flyer_recipient',
-    Field('info_flyer_id', 'reference mfi_info_flyer', notnull=True),
-    Field('b2c_id', 'reference b2c', notnull=True),
+    'instruction_recipient',
+    Field('instruction_id', 'reference instruction', notnull=True,
+          comment='Which instruction this record tracks (renamed from info_flyer_id)'),
+    Field('participant_id', 'reference participant', notnull=True,
+          comment='Which participant received this instruction (renamed from b2c_id)'),
+    Field('context_id', 'reference context', notnull=True,
+          comment='Which operational context this recipient relationship exists in'),
     Field('is_read', 'boolean', default=False),
     Field('read_on', 'datetime'),
     Field('response', 'string'),
@@ -189,23 +373,22 @@ db.define_table(
     Field('created_on', 'datetime', default=request.now)
 )
 
-
-#db.define_table('b2c_timeline_info_flyer',
-#    Field('b2c_id', 'reference b2c'),
-#    Field('title', 'string'),
-#    Field('the_info_flyer', 'text'),
-#    Field('the_date', 'datetime', default=request.now),
-#    migrate=True
-#)
-
-
-
 ############################################################
-# 8. FLYER TABLES (Existing Functionality)
+# 7. FLYER TABLES (Public Content Publishing)
 ############################################################
+# Represents public content published by participants (e.g. business flyers, portfolios).
+# In microfinance: business advertisements or product catalogs
+# In coaching: client success stories or testimonials
+# In internal org: project showcases or team updates
+#
+# MIGRATION NOTE: Table names preserved as "flyer" is reasonably context-neutral
+# Added context_id for multi-context support
 
 db.define_table('flyer',
-    Field('b2c_id', 'reference b2c', notnull=True),
+    Field('participant_id', 'reference participant', notnull=True,
+          comment='Which participant created this flyer (renamed from b2c_id)'),
+    Field('context_id', 'reference context', notnull=True,
+          comment='Which operational context this flyer exists in'),
     Field('title', 'string', length=255, notnull=True, default='Untitled Flyer'),
     Field('thecontent', 'text', notnull=True, 
           default='# Your content here\n\nStart writing...'),
@@ -222,34 +405,146 @@ db.flyer.title.requires = [
 ]
 db.flyer.thecontent.requires = IS_NOT_EMPTY(error_message='Content required')
 
-
 db.define_table('flyer_view',
     Field('flyer_id', 'reference flyer', notnull=True),
     Field('viewer_ip', 'string'),
     Field('viewed_on', 'datetime', default=request.now)
 )
 
-def send_info_flyer_to_borrowers(mfi_id, b2c_ids, subject, info_flyer_text, response_template, sent_by):
+############################################################
+# 8. HELPER FUNCTIONS
+############################################################
+
+def send_instruction_to_participants(responsible_id, participant_ids, subject, instruction_text, response_template, sent_by, context_id):
     """
-    Handles the double-insert logic: 
-    1. Creates the message record 
-    2. Links it to all selected recipients
+    Send an instruction from a responsible entity to multiple participants.
+    
+    CONTEXT-AWARE ANNOTATION:
+    This mechanic is universal across contexts:
+    - Create one instruction record
+    - Link it to N participants
+    - Track read/response status per participant
+    
+    The only context-specific aspect is how this appears in UI language,
+    which should be resolved via the feature_language table.
+    
+    Args:
+        responsible_id: ID of the responsible entity sending the instruction (renamed from mfi_id)
+        participant_ids: List of participant IDs to receive this instruction (renamed from b2c_ids)
+        subject: Subject line
+        instruction_text: Main content (renamed from info_flyer_text)
+        response_template: Expected response format
+        sent_by: Username of sender
+        context_id: Which context this instruction belongs to
+    
+    Returns:
+        instruction_id: ID of the created instruction record
     """
-    # 1. Insert the main message record
-    info_flyer_id = db.mfi_info_flyer.insert(
-        mfi_id=mfi_id,
+    # 1. Insert the main instruction record
+    instruction_id = db.instruction.insert(
+        responsible_id=responsible_id,
+        context_id=context_id,
         subject=subject,
-        info_flyer_text=info_flyer_text,
+        instruction_text=instruction_text,
         response_template=response_template,
         sent_by=sent_by
     )
     
-    # 2. Insert a recipient record for every selected borrower
-    for b_id in b2c_ids:
-        db.info_flyer_recipient.insert(
-            info_flyer_id=info_flyer_id,
-            b2c_id=b_id,
+    # 2. Insert a recipient record for every selected participant
+    for p_id in participant_ids:
+        db.instruction_recipient.insert(
+            instruction_id=instruction_id,
+            participant_id=p_id,
+            context_id=context_id,
             is_read=False
         )
     
-    return info_flyer_id
+    return instruction_id
+
+############################################################
+# MIGRATION GUIDE
+############################################################
+"""
+To migrate from the old schema to this new schema:
+
+1. Add new tables first:
+   - context
+   - feature_language
+
+2. Add new columns to existing tables:
+   ALTER TABLE mfi ADD COLUMN context_id INTEGER REFERENCES context(id);
+   (repeat for all tables that need context_id)
+
+3. Create a default context (e.g. "microfinance"):
+   INSERT INTO context (context_key, display_name, description, is_active) 
+   VALUES ('microfinance', 'Microfinance', 'Original microfinance context', TRUE);
+
+4. Populate context_id in all existing records with the default context
+
+5. Rename tables in order (to preserve foreign key relationships):
+   ALTER TABLE mfi RENAME TO responsible;
+   ALTER TABLE b2c RENAME TO participant;
+   ALTER TABLE daily_signal RENAME TO execution_signal;
+   ALTER TABLE mfi_info_flyer RENAME TO instruction;
+   ALTER TABLE info_flyer_recipient RENAME TO instruction_recipient;
+
+6. Rename columns:
+   ALTER TABLE responsible RENAME COLUMN b2c_accounts TO participant_limit;
+   ALTER TABLE participant RENAME COLUMN mfi_id TO responsible_id;
+   ALTER TABLE participant RENAME COLUMN (all b2c_id references);
+   ALTER TABLE instruction RENAME COLUMN mfi_id TO responsible_id;
+   ALTER TABLE instruction RENAME COLUMN info_flyer_text TO instruction_text;
+   ALTER TABLE instruction_recipient RENAME COLUMN info_flyer_id TO instruction_id;
+   ALTER TABLE instruction_recipient RENAME COLUMN b2c_id TO participant_id;
+
+7. Populate feature_language table with initial microfinance mappings:
+   Examples in INSERT statements showing how to map:
+   - 'instruction' → 'Bank Message'
+   - 'participant' → 'Borrower'
+   - 'execution_signal' → 'Daily Business Signal'
+   etc.
+
+8. Update application code:
+   - Replace all references to old table names
+   - Replace all references to old column names
+   - Update UI to fetch language strings from feature_language table
+   - Pass context_id through all operations
+
+9. Make context_id NOT NULL after migration (currently nullable for migration ease)
+
+10. Add new contexts as needed (coaching, internal_org, etc.)
+"""
+
+############################################################
+# CONTEXT CONFIGURATION EXAMPLES
+############################################################
+"""
+Example context.config_json structures for different domains:
+
+MICROFINANCE:
+{
+    "participant_limit_default": 100,
+    "requires_repayment_tracking": true,
+    "signal_frequency": "daily",
+    "currencies": ["USD", "KES", "UGX"],
+    "default_currency": "USD"
+}
+
+COACHING:
+{
+    "participant_limit_default": 20,
+    "requires_repayment_tracking": false,
+    "signal_frequency": "daily",
+    "session_duration_minutes": 60,
+    "goal_categories": ["fitness", "career", "relationships", "finance"]
+}
+
+INTERNAL_ORG:
+{
+    "participant_limit_default": 50,
+    "requires_repayment_tracking": false,
+    "signal_frequency": "daily",
+    "reporting_hierarchy_depth": 3,
+    "performance_review_cycle": "quarterly"
+}
+"""
