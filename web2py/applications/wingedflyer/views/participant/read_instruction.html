@@ -1,0 +1,50 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{=instruction.subject}}</h3>
+                    <p class="mb-0 text-muted">
+                        Sent: {{=instruction.created_on.strftime('%Y-%m-%d %H:%M')}} 
+                        by {{=instruction.sent_by}}
+                    </p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <p style="white-space: pre-wrap;">{{=instruction.instruction_text}}</p>
+                    </div>
+
+                    {{if recipient.is_read:}}
+                        <div class="alert alert-success">
+                            <i class="fa fa-check"></i> You read this on {{=recipient.read_on.strftime('%Y-%m-%d %H:%M')}}
+                        </div>
+                    {{pass}}
+
+                    {{if recipient.response:}}
+                        <div class="alert alert-info">
+                            <strong>Your Response:</strong> {{=recipient.response}}<br>
+                            <small>Responded on: {{=recipient.responded_on.strftime('%Y-%m-%d %H:%M')}}</small>
+                        </div>
+                    {{elif response_form:}}
+                        <hr>
+                        <div class="card bg-light">
+                            <div class="card-header">
+                                <h5>Response Required</h5>
+                            </div>
+                            <div class="card-body">
+                                {{=response_form}}
+                            </div>
+                        </div>
+                    {{pass}}
+                </div>
+                <div class="card-footer">
+                    <a href="{{=URL('instructions')}}" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> Back to {{=instruction_label_plural}}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
