@@ -162,7 +162,7 @@ jQuery(document).ready(function(){
   {{elif request.function in ['select', 'insert', 'update']:}}
     <h2>{{=T("Database Task:")}} {{=request.function.capitalize()}}</h2>
     <div class="well">
-        {{=form #if 'form' in globals() else ''}}
+        {{=form}}
         {{=grid if 'grid' in globals() else ''}}
         {{=rows if 'rows' in globals() and not isinstance(rows, list) else ''}}
     </div>
