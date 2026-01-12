@@ -696,12 +696,12 @@ def d3_graph_model():
 # ##########################################################
 def manage_language():
     """Manage context-specific language strings"""
-    # 1. Representation for the foreign key
+    # Improve readability for the grid
     db.feature_language.context_id.represent = lambda val, row: db.context[val].display_name if val else ""
     
-    # 2. Manually define the REQUIRED dictionary keys.
-    # web2py's internal string formatting requires these specific keys to exist.
-    full_ui_dict = {
+    # We define a complete dictionary to satisfy both the 
+    # isinstance(ui, dict) check and the string formatting requirements.
+    full_ui = {
         'header': '',
         'main': '',
         'footer': '',
@@ -720,11 +720,10 @@ def manage_language():
         'pager_info': 'pager_info pull-right'
     }
 
-    # 3. Generate the grid
     grid = SQLFORM.grid(
         db.feature_language,
         orderby=[db.feature_language.context_id, db.feature_language.feature_key],
-        ui=full_ui_dict,  # This is a dict, satisfying the type check
+        ui=full_ui,  # Passing the dictionary directly
         user_signature=False,
         csv=True
     )
