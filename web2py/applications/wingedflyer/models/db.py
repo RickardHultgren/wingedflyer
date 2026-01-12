@@ -10,8 +10,7 @@ configuration = AppConfig(reload=True)
 # Database connection
 db = DAL(configuration.get('db.uri'),
          pool_size=configuration.get('db.pool_size'),
-         #migrate_enabled=configuration.get('db.migrate'),
-         migrate_enabled=True,
+         migrate_enabled=configuration.get('db.migrate'),
          check_reserved=['all'])
 
 # Auth system
