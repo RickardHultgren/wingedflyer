@@ -1,0 +1,79 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{=instruction_label}} Details</h3>
+                </div>
+                <div class="card-body">
+                    <h4>{{=instruction.subject}}</h4>
+                    <p class="text-muted">
+                        Sent: {{=instruction.created_on.strftime('%Y-%m-%d %H:%M')}} by {{=instruction.sent_by}}
+                    </p>
+                    <hr>
+                    <div class="mb-4">
+                        <h5>Message Content:</h5>
+                        <p style="white-space: pre-wrap;">{{=instruction.instruction_text}}</p>
+                    </div>
+                    <hr>
+                    <h5>Recipients & Responses:</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Recipient</th>
+                                    <th>Read Status</th>
+                                    <th>Read On</th>
+                                    {{if instruction.response_template != 'NONE':}}
+                                        <th>Response</th>
+                                        <th>Responded On</th>
+                                    {{pass}}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{for r in recipients:}}
+                                    <tr>
+                                        <td>
+                                            <a href="{{=URL('participant', args=[r.participant.id])}}">
+                                                {{=r.participant.real_name}}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {{if r.instruction_recipient.is_read:}}
+                                                <span class="badge badge-success">Read</span>
+                                            {{else:}}
+                                                <span class="badge badge-secondary">Unread</span>
+                                            {{pass}}
+                                        </td>
+                                        <td>
+                                            {{=r.instruction_recipient.read_on.strftime('%Y-%m-%d %H:%M') if r.instruction_recipient.read_on else '-'}}
+                                        </td>
+                                        {{if instruction.response_template != 'NONE':}}
+                                            <td>
+                                                {{if r.instruction_recipient.response:}}
+                                                    {{=r.instruction_recipient.response}}
+                                                {{else:}}
+                                                    <span class="text-muted">No response yet</span>
+                                                {{pass}}
+                                            </td>
+                                            <td>
+                                                {{=r.instruction_recipient.responded_on.strftime('%Y-%m-%d %H:%M') if r.instruction_recipient.responded_on else '-'}}
+                                            </td>
+                                        {{pass}}
+                                    </tr>
+                                {{pass}}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{{=URL('sent_instructions')}}" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> Back to Sent {{=instruction_label_plural}}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
