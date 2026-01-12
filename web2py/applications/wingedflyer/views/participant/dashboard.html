@@ -1,0 +1,227 @@
+{{extend 'layout.html'}}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>Welcome, {{=participant.real_name}}</h2>
+            <p class="text-muted">
+                Context: {{=context_name}} | {{=responsible_label}}: {{=responsible_name}}
+            </p>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{=len(work_activities)}}</h3>
+                    <p>{{=work_activity_label_plural}}</p>
+                    <a href="{{=URL('work_activities')}}" class="btn btn-light btn-sm">Manage</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h3>{{=len(recent_signals)}}</h3>
+                    <p>Recent {{=execution_signal_label_plural}}</p>
+                    <a href="{{=URL('create_signal')}}" class="btn btn-light btn-sm">Add Signal</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h3>{{=len(unread_instructions)}}</h3>
+                    <p>Unread {{=instruction_label_plural}}</p>
+                    <a href="{{=URL('instructions')}}" class="btn btn-light btn-sm">View Inbox</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h3>{{=len(pending_responses)}}</h3>
+                    <p>Pending Responses</p>
+                    <a href="{{=URL('instructions')}}" class="btn btn-light btn-sm">Respond</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context-Specific Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Your Metrics</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="metric-box">
+                                <h5>{{=metric1_label}}</h5>
+                                <h3>{{=participant.amount_borrowed}}</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="metric-box">
+                                <h5>{{=metric2_label}}</h5>
+                                <h3>{{=participant.amount_repaid_b2c_reported}}</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="metric-box">
+                                <h5>Balance/Remaining</h5>
+                                <h3>{{=balance}}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Recent Signals -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Recent {{=execution_signal_label_plural}} (Last 7 Days)</h4>
+                    <a href="{{=URL('create_signal')}}" class="btn btn-sm btn-primary float-right">
+                        <i class="fa fa-plus"></i> Add Signal
+                    </a>
+                </div>
+                <div class="card-body">
+                    {{if recent_signals:}}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Activity</th>
+                                        <th>Outcome</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{for s in recent_signals:}}
+                                        <tr>
+                                            <td>{{=s.execution_signal.signal_date.strftime('%m-%d')}}</td>
+                                            <td>{{=s.work_activity.activity_name if s.work_activity else '-'}}</td>
+                                            <td>
+                                                {{if s.execution_signal.outcome == 'BETTER':}}
+                                                    <span class="badge badge-success">BETTER</span>
+                                                {{elif s.execution_signal.outcome == 'WORSE':}}
+                                                    <span class="badge badge-danger">WORSE</span>
+                                                {{else:}}
+                                                    <span class="badge badge-secondary">AS EXPECTED</span>
+                                                {{pass}}
+                                            </td>
+                                        </tr>
+                                    {{pass}}
+                                </tbody>
+                            </table>
+                        </div>
+                        <a href="{{=URL('signals')}}" class="btn btn-sm btn-outline-primary">
+                            View All Signals
+                        </a>
+                    {{else:}}
+                        <p class="text-muted">No recent signals. 
+                            <a href="{{=URL('create_signal')}}">Add your first signal</a>
+                        </p>
+                    {{pass}}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Unread Instructions -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Unread {{=instruction_label_plural}}</h4>
+                    <a href="{{=URL('instructions')}}" class="btn btn-sm btn-primary float-right">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {{if unread_instructions:}}
+                        <div class="list-group">
+                            {{for msg in unread_instructions:}}
+                                <a href="{{=URL('read_instruction', args=[msg.instruction.id])}}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{=msg.instruction.subject}}</h6>
+                                        <small>{{=msg.instruction.created_on.strftime('%m-%d %H:%M')}}</small>
+                                    </div>
+                                    <p class="mb-1 text-truncate">
+                                        {{=msg.instruction.instruction_text[:100]}}...
+                                    </p>
+                                </a>
+                            {{pass}}
+                        </div>
+                    {{else:}}
+                        <p class="text-muted">No unread {{=instruction_label_plural.lower()}}.</p>
+                    {{pass}}
+                </div>
+            </div>
+
+            {{if pending_responses:}}
+                <div class="card mb-4">
+                    <div class="card-header bg-warning">
+                        <h4>Pending Responses Required</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {{for msg in pending_responses:}}
+                                <a href="{{=URL('read_instruction', args=[msg.instruction.id])}}" 
+                                   class="list-group-item list-group-item-action list-group-item-warning">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{=msg.instruction.subject}}</h6>
+                                        <span class="badge badge-danger">Response Required</span>
+                                    </div>
+                                </a>
+                            {{pass}}
+                        </div>
+                    </div>
+                </div>
+            {{pass}}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Quick Actions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <a href="{{=URL('create_signal')}}" class="btn btn-primary">
+                            <i class="fa fa-plus"></i> Add {{=execution_signal_label}}
+                        </a>
+                        <a href="{{=URL('create_work_activity')}}" class="btn btn-info">
+                            <i class="fa fa-briefcase"></i> Add {{=work_activity_label}}
+                        </a>
+                        <a href="{{=URL('create_flyer')}}" class="btn btn-success">
+                            <i class="fa fa-file-text"></i> Create Flyer
+                        </a>
+                        <a href="{{=URL('profile')}}" class="btn btn-secondary">
+                            <i class="fa fa-user"></i> Edit Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.metric-box {
+    text-align: center;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+</style>
