@@ -1,0 +1,65 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>My {{=work_activity_label_plural}}</h2>
+            <div class="btn-group">
+                <a href="{{=URL('dashboard')}}" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <a href="{{=URL('create_work_activity')}}" class="btn btn-primary">
+                    <i class="fa fa-plus"></i> Add New {{=work_activity_label}}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            {{if activities:}}
+                <div class="card-columns">
+                    {{for activity in activities:}}
+                        <div class="card {{='' if activity.is_active else 'border-secondary'}}">
+                            <div class="card-header {{='' if activity.is_active else 'bg-secondary text-white'}}">
+                                <h5>{{=activity.activity_name}}</h5>
+                                {{if not activity.is_active:}}
+                                    <span class="badge badge-light">Inactive</span>
+                                {{pass}}
+                            </div>
+                            <div class="card-body">
+                                {{if activity.description:}}
+                                    <p>{{=activity.description}}</p>
+                                {{else:}}
+                                    <p class="text-muted">No description</p>
+                                {{pass}}
+                                <small class="text-muted">
+                                    Created: {{=activity.created_on.strftime('%Y-%m-%d')}}
+                                </small>
+                            </div>
+                            <div class="card-footer">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{=URL('edit_work_activity', args=[activity.id])}}" 
+                                       class="btn btn-primary">
+                                        <i class="fa fa-edit"></i> Edit
+                                    </a>
+                                    <a href="{{=URL('delete_work_activity', args=[activity.id])}}" 
+                                       class="btn btn-danger"
+                                       onclick="return confirm('Delete this activity?');">
+                                        <i class="fa fa-trash"></i> Delete
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {{pass}}
+                </div>
+            {{else:}}
+                <div class="alert alert-info">
+                    <p>No {{=work_activity_label_plural.lower()}} yet. 
+                       <a href="{{=URL('create_work_activity')}}">Create your first {{=work_activity_label.lower()}}</a>
+                    </p>
+                </div>
+            {{pass}}
+        </div>
+    </div>
+</div>
