@@ -695,18 +695,16 @@ def d3_graph_model():
 # ## Language Mapping Management (New for your Context System)
 # ##########################################################
 def manage_language():
-    """Manage context-specific language strings"""
-    # 1. Standard representation for readability
     db.feature_language.context_id.represent = lambda val, row: db.context[val].display_name if val else ""
     
-    # 2. Use the built-in Bootstrap 3 UI dictionary. 
-    # This prevents KeyErrors because it contains all required keys (header, cornerbottom, etc.)
+    # Import the actual dictionary object from the source code
+    from gluon.sqlhtml import grid_bootstrap3
+    
     grid = SQLFORM.grid(
         db.feature_language,
         orderby=[db.feature_language.context_id, db.feature_language.feature_key],
-        ui='bootstrap3', # In newer web2py versions, this string is mapped to a internal dict
+        ui=grid_bootstrap3, # This dictionary has EVERY key the grid needs
         user_signature=False,
         csv=True
     )
-    
     return dict(grid=grid)
