@@ -119,17 +119,44 @@ jQuery(document).ready(function(){
     <a class="btn btn-secondary" href="{{=URL('responsiblelist')}}">{{=T("Back to List")}}</a>
 
   {{elif request.function == 'manage_language':}}
-    <h2>{{=T("Feature Language Mappings")}}</h2>
-    <div class="panel panel-default">
-      <div class="panel-body">
-        <div class="alert alert-info">
-          <strong>{{=T("Guide:")}}</strong> {{=T("label (Singular), label_plural (Plural), call_to_action (Buttons)")}}
-        </div>
-        {{=grid}}
+      <div class="row">
+          <div class="col-md-9">
+              <h2><i class="glyphicon glyphicon-globe"></i> {{=T("Feature Language Mappings")}}</h2>
+              <p class="text-muted">
+                  {{=T("Define how features are named for different organizational contexts (e.g., 'Borrower' for MFIs vs 'Coachee' for Coaching).")}}
+              </p>
+          </div>
+          <div class="col-md-3 text-right" style="padding-top: 25px;">
+              <a class="btn btn-default" href="{{=URL('index')}}">
+                  <i class="glyphicon glyphicon-arrow-left"></i> {{=T("Back to Admin")}}
+                </a>
+          </div>
       </div>
-    </div>
-    <a class="btn btn-secondary" href="{{=URL('index')}}">{{=T("Back")}}</a>
 
+      <div class="panel panel-default" style="margin-top: 20px;">
+        <div class="panel-heading">
+            <h3 class="panel-title">{{=T("Translation Dictionary")}}</h3>
+        </div>
+        <div class="panel-body">
+          <div class="alert alert-warning" style="font-size: 0.9em;">
+            <i class="glyphicon glyphicon-info-sign"></i> 
+            <strong>{{=T("Formatting Guide:")}}</strong> 
+            <code>label</code> (Singular), <code>label_plural</code> (Plural), <code>call_to_action</code> (Buttons).
+          </div>
+          
+          <div class="web2py_grid">
+              {{=grid}}
+          </div>
+        </div>
+      </div>
+
+      <style>
+          /* Specific tweaks for the Grid UI within this view */
+          .web2py_grid table { margin-bottom: 0; }
+          .web2py_grid .web2py_console { margin-bottom: 15px; }
+          .web2py_grid .btn { margin-right: 5px; }
+          .label-info { font-size: 0.9em; }
+      </style>
   {{elif request.function in ['select', 'insert', 'update']:}}
     <h2>{{=T("Database Task:")}} {{=request.function.capitalize()}}</h2>
     <div class="well">
