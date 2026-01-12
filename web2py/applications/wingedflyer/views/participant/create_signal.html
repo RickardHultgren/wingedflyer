@@ -1,0 +1,31 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Add New {{=execution_signal_label}}</h3>
+                    <p class="mb-0 text-muted">Report on your {{=work_activity_label.lower()}} execution</p>
+                </div>
+                <div class="card-body">
+                    {{=form}}
+                    <hr>
+                    <div class="alert alert-info">
+                        <h6>Signal Outcomes:</h6>
+                        <ul>
+                            <li><strong>BETTER:</strong> Execution exceeded expectations</li>
+                            <li><strong>AS EXPECTED:</strong> Execution met expectations</li>
+                            <li><strong>WORSE:</strong> Execution fell short of expectations</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{{=URL('signals')}}" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
