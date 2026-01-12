@@ -48,6 +48,7 @@ jQuery(document).ready(function(){
                     <th class="text-right">{{=T("Management Actions")}}</th>
                 </tr>
             </thead>
+            <tbody>
             {{for db_name in sorted(databases):}}
                 {{for table in databases[db_name].tables:}}
                 <tr>
@@ -65,6 +66,7 @@ jQuery(document).ready(function(){
                 </tr>
                 {{pass}}
             {{pass}}
+            </tbody>
         </table>
     {{pass}}
 
@@ -72,7 +74,7 @@ jQuery(document).ready(function(){
     <h2>{{=T("Responsible Entities")}}</h2>
     {{if 'error' in globals() and error:}}
       <div class="alert alert-danger">{{=error}}</div>
-    {{elif rows:}}
+    {{elif 'rows' in globals() and rows:}}
       <div class="table-responsive">
         <table class="table table-striped table-bordered table-hover sortable">
           <thead class="thead-dark">
@@ -116,13 +118,13 @@ jQuery(document).ready(function(){
 
   {{elif request.function=='responsibleedit':}}
     <h2>{{=T("Edit Responsible Entity")}}</h2>
-    {{if record:}}
+    {{if 'record' in globals() and record:}}
       <div class="alert alert-info">
-        <strong>{{=T("Context:")}}</strong> {{=context_name}} | 
-        <strong>{{=T("Participants:")}}</strong> <span class="badge">{{=participant_count}}</span>
+        <strong>{{=T("Context:")}}</strong> {{=context_name if 'context_name' in globals() else ''}} | 
+        <strong>{{=T("Participants:")}}</strong> <span class="badge">{{=participant_count if 'participant_count' in globals() else '0'}}</span>
       </div>
       <div class="panel panel-default">
-        <div class="panel-body">{{=form}}</div>
+        <div class="panel-body">{{=form if 'form' in globals() else ''}}</div>
       </div>
     {{pass}}
     <a class="btn btn-secondary" href="{{=URL('responsiblelist')}}">{{=T("Back to List")}}</a>
@@ -130,7 +132,7 @@ jQuery(document).ready(function(){
   {{elif request.function=='responsiblecreate':}}
     <h2>{{=T("Register New Responsible Entity")}}</h2>
     <div class="panel panel-primary">
-      <div class="panel-body">{{=form}}</div>
+      <div class="panel-body">{{=form if 'form' in globals() else ''}}</div>
     </div>
     <a class="btn btn-secondary" href="{{=URL('responsiblelist')}}">{{=T("Back to List")}}</a>
 
@@ -138,9 +140,6 @@ jQuery(document).ready(function(){
       <div class="row">
           <div class="col-md-9">
               <h2><i class="glyphicon glyphicon-globe"></i> {{=T("Feature Language Mappings")}}</h2>
-              <p class="text-muted">
-                  {{=T("Define how features are named for different organizational contexts (e.g., 'Borrower' for MFIs vs 'Coachee' for Coaching).")}}
-              </p>
           </div>
           <div class="col-md-3 text-right" style="padding-top: 25px;">
               <a class="btn btn-default" href="{{=URL('index')}}">
@@ -154,25 +153,12 @@ jQuery(document).ready(function(){
             <h3 class="panel-title">{{=T("Translation Dictionary")}}</h3>
         </div>
         <div class="panel-body">
-          <div class="alert alert-warning" style="font-size: 0.9em;">
-            <i class="glyphicon glyphicon-info-sign"></i> 
-            <strong>{{=T("Formatting Guide:")}}</strong> 
-            <code>label</code> (Singular), <code>label_plural</code> (Plural), <code>call_to_action</code> (Buttons).
-          </div>
-          
           <div class="web2py_grid">
-              {{=grid}}
+              {{=grid if 'grid' in globals() else ''}}
           </div>
         </div>
       </div>
 
-      <style>
-          /* Specific tweaks for the Grid UI within this view */
-          .web2py_grid table { margin-bottom: 0; }
-          .web2py_grid .web2py_console { margin-bottom: 15px; }
-          .web2py_grid .btn { margin-right: 5px; }
-          .label-info { font-size: 0.9em; }
-      </style>
   {{elif request.function in ['select', 'insert', 'update']:}}
     <h2>{{=T("Database Task:")}} {{=request.function.capitalize()}}</h2>
     <div class="well">
