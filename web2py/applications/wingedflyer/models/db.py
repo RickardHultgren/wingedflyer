@@ -3,6 +3,8 @@ from gluon.tools import Auth
 import bcrypt
 from datetime import datetime, timedelta
 
+db = DAL(configuration.get('db.uri'), migrate_enabled=True)
+
 # Load configuration
 configuration = AppConfig(reload=True)
 
