@@ -1,0 +1,130 @@
+{{extend 'layout.html'}}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>{{=responsible}} Dashboard</h2>
+            <p class="text-muted">Context: {{=context_name}}</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="btn-group" role="group">
+                {{if can_create:}}
+                    <a href="{{=URL('create_participant')}}" class="btn btn-primary">
+                        <i class="fa fa-plus"></i> Create New {{=participant_label}}
+                    </a>
+                {{else:}}
+                    <button class="btn btn-secondary" disabled>
+                        {{=participant_label}} Limit Reached
+                    </button>
+                {{pass}}
+                <a href="{{=URL('compose_instruction')}}" class="btn btn-info">
+                    <i class="fa fa-envelope"></i> Send Instruction
+                </a>
+                <a href="{{=URL('sent_instructions')}}" class="btn btn-outline-secondary">
+                    <i class="fa fa-paper-plane"></i> Sent Instructions
+                </a>
+                <a href="{{=URL('signals_overview')}}" class="btn btn-outline-secondary">
+                    <i class="fa fa-signal"></i> Signals Overview
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{=participant_label_plural}} ({{=len(participant_data)}})</h4>
+                </div>
+                <div class="card-body">
+                    {{if participant_data:}}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Username</th>
+                                        <th>Recent Worse Signals</th>
+                                        <th>Unread Instructions</th>
+                                        <th>Pending Responses</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{for item in participant_data:}}
+                                        <tr class="{{='table-warning' if item['needs_attention'] else ''}}">
+                                            <td>
+                                                <strong>{{=item['participant'].real_name}}</strong>
+                                            </td>
+                                            <td>{{=item['participant'].username}}</td>
+                                            <td>
+                                                {{if item['recent_worse_signals'] > 0:}}
+                                                    <span class="badge badge-danger">
+                                                        {{=item['recent_worse_signals']}}
+                                                    </span>
+                                                {{else:}}
+                                                    <span class="badge badge-success">0</span>
+                                                {{pass}}
+                                            </td>
+                                            <td>
+                                                {{if item['unread_instructions'] > 0:}}
+                                                    <span class="badge badge-info">
+                                                        {{=item['unread_instructions']}}
+                                                    </span>
+                                                {{else:}}
+                                                    <span class="badge badge-secondary">0</span>
+                                                {{pass}}
+                                            </td>
+                                            <td>
+                                                {{if item['pending_responses'] > 0:}}
+                                                    <span class="badge badge-warning">
+                                                        {{=item['pending_responses']}}
+                                                    </span>
+                                                {{else:}}
+                                                    <span class="badge badge-secondary">0</span>
+                                                {{pass}}
+                                            </td>
+                                            <td>
+                                                {{if item['needs_attention']:}}
+                                                    <i class="fa fa-exclamation-triangle text-warning"></i> Needs Attention
+                                                {{else:}}
+                                                    <i class="fa fa-check-circle text-success"></i> OK
+                                                {{pass}}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{=URL('participant', args=[item['participant'].id])}}" 
+                                                       class="btn btn-sm btn-primary" title="View Details">
+                                                        <i class="fa fa-eye"></i>
+                                                    </a>
+                                                    <a href="{{=URL('compose_instruction', args=[item['participant'].id])}}" 
+                                                       class="btn btn-sm btn-info" title="Send Instruction">
+                                                        <i class="fa fa-envelope"></i>
+                                                    </a>
+                                                    <a href="{{=URL('edit_participant', args=[item['participant'].id])}}" 
+                                                       class="btn btn-sm btn-secondary" title="Edit">
+                                                        <i class="fa fa-edit"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {{pass}}
+                                </tbody>
+                            </table>
+                        </div>
+                    {{else:}}
+                        <div class="alert alert-info">
+                            <p>No {{=participant_label_plural.lower()}} yet. 
+                               <a href="{{=URL('create_participant')}}">Create your first {{=participant_label.lower()}}</a>
+                            </p>
+                        </div>
+                    {{pass}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
