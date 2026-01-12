@@ -23,7 +23,7 @@ jQuery(document).ready(function(){
       {{=T("Manage entities (MFIs, Coaching Orgs, etc.) and their operational contexts.")}}
     </div>
 
-    <div class="my-3">
+    <div class="my-3" style="margin-bottom: 20px;">
       <a class="btn btn-success btn-lg" href="{{=URL('responsiblelist')}}">
         <i class="glyphicon glyphicon-list"></i> {{=T("View All Responsibles")}}
       </a>
@@ -32,13 +32,28 @@ jQuery(document).ready(function(){
       </a>
       <a class="btn btn-info btn-lg" href="{{=URL('manage_language')}}">
         <i class="glyphicon glyphicon-globe"></i> {{=T("Manage Language Mappings")}}
+      </a>
+    </div>
 
-      {{if 'databases' in globals():}}
-        <table class="table table-striped">
+    <hr/>
+
+    <h3>{{=T("Available Databases and Tables")}}</h3>
+    <p class="text-muted">{{=T("Use these links to manage the raw 'Context' and 'Language' records.")}}</p>
+    
+    {{if 'databases' in globals():}}
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
+                <tr>
+                    <th>{{=T("Table Name")}}</th>
+                    <th class="text-right">{{=T("Management Actions")}}</th>
+                </tr>
+            </thead>
             {{for db_name in sorted(databases):}}
                 {{for table in databases[db_name].tables:}}
                 <tr>
-                    <td style="vertical-align: middle;"><strong>{{=table}}</strong></td>
+                    <td style="vertical-align: middle;">
+                        <i class="glyphicon glyphicon-table"></i> <strong>{{=table}}</strong>
+                    </td>
                     <td class="text-right">
                         <a href="{{=URL('select', args=[db_name], vars=dict(query='%s.%s.id>0' % (db_name, table)))}}" class="btn btn-sm btn-default">
                            <i class="glyphicon glyphicon-search"></i> {{=T('view rows')}}
@@ -46,25 +61,6 @@ jQuery(document).ready(function(){
                         <a href="{{=URL('insert', args=[db_name, table])}}" class="btn btn-sm btn-success">
                            <i class="glyphicon glyphicon-plus"></i> {{=T('insert new')}}
                         </a>
-                    </td>
-                </tr>
-                {{pass}}
-            {{pass}}
-        </table>
-      {{pass}}  
-      </a>
-    </div>
-
-    <hr/>
-    <h3>{{=T("Available Databases and Tables")}}</h3>
-    {{if 'databases' in globals():}}
-        <table class="table table-striped">
-            {{for db_name in sorted(databases):}}
-                {{for table in databases[db_name].tables:}}
-                <tr>
-                    <td>{{=db_name}}.{{=table}}</td>
-                    <td class="text-right">
-                        <a href="{{=URL('select', args=[db_name], vars=dict(query='%s.%s.id>0' % (db_name, table)))}}" class="btn btn-sm btn-default">{{=T('view rows')}}</a>
                     </td>
                 </tr>
                 {{pass}}
