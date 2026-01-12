@@ -62,23 +62,17 @@ db.context.display_name.requires = IS_NOT_EMPTY()
 db.define_table(
     'feature_language',
     Field('context_id', 'reference context', notnull=True,
-          comment='Which context this language applies to'),
-    Field('feature_key', 'string', notnull=True,
-          comment='The mechanic-level feature identifier (e.g. "instruction", "participant", "execution_signal")'),
-    Field('language_variant', 'string', notnull=True,
-          comment='Type of language string (e.g. "label", "label_plural", "description", "call_to_action")'),
-    Field('language_value', 'string', notnull=True,
-          comment='The actual text to display in this context'),
-    Field('created_on', 'datetime', default=request.now, writable=False),
-    Field('updated_on', 'datetime', update=request.now, writable=False)
+          label=T('Context'),
+          requires=IS_IN_DB(db, 'context.id', '%(display_name)s')),
+    Field('feature_key', 'string', notnull=True),
+    Field('language_variant', 'string', notnull=True),
+    Field('language_value', 'string', notnull=True),
+    # ... created_on, updated_on ...
 )
 
-# Ensure unique combinations of context + feature + variant
-db.feature_language.requires = IS_NOT_IN_DB(
-    db,
-    'feature_language.context_id AND feature_language.feature_key AND feature_language.language_variant',
-    error_message='This language mapping already exists'
-)
+# Apply these after the table is defined
+db.feature_language.language_variant.requires = IS_IN_SET(['label', 'label_plural', 'description', 'call_to_action'])
+db.feature_language.feature_key.requires = IS_IN_SET(['participant', 'responsible', 'instruction', 'execution_signal'])
 
 # Index for fast lookups by context and feature
 db.executesql('CREATE INDEX IF NOT EXISTS idx_feature_language_lookup ON feature_language(context_id, feature_key, language_variant);')
