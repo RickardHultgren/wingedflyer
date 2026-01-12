@@ -548,13 +548,13 @@ INTERNAL_ORG:
     "performance_review_cycle": "quarterly"
 }
 """
+# 1. Close your table definition correctly
 db.define_table('feature_language',
-    Field('context_id', 'reference context', 
-          label=T('Context'),
-          requires=IS_IN_DB(db, 'context.id', '%(display_name)s')), # This creates the dropdown
-    Field('feature_key', 'string'),
+    Field('context_id', 'reference context'),
+    Field('language_variant', 'string'),
     # ... other fields
-)
+) # Ensure this parenthesis is on its own line or correctly closing the define_table
 
+# 2. Add the 'requires' logic on a fresh line below the table definition
 db.feature_language.language_variant.requires = IS_IN_SET(['label', 'label_plural', 'description', 'call_to_action'])
-db.feature_language.feature_key.comment = "Internal key like 'participant' or 'instruction'"
+db.feature_language.feature_key.requires = IS_IN_SET(['participant', 'responsible', 'instruction', 'action_button'])
