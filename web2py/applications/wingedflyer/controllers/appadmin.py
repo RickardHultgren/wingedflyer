@@ -697,12 +697,12 @@ def d3_graph_model():
 
 def manage_language():
     """Manage context-specific language strings"""
-    # Make the context_id look readable in the grid by showing the display_name
+    # 1. Improve readability: Show the context name instead of the ID
     db.feature_language.context_id.represent = lambda val, row: db.context[val].display_name if val else ""
     
-    # Use the 'web2py' string (which web2py converts to a internal dict) 
-    # or pass a custom dict for Bootstrap 3 compatibility
-    ui_dict = {
+    # 2. Define the UI dictionary to satisfy the RuntimeError
+    # This maps web2py grid elements to Bootstrap classes
+    bootstrap_ui = {
         'widgetbutton': 'btn btn-default btn-secondary',
         'headerer': 'active',
         'pager_for': 'pagination',
@@ -710,13 +710,17 @@ def manage_language():
         'search_button': 'btn btn-primary',
         'delete_button': 'btn btn-danger',
         'edit_button': 'btn btn-warning',
-        'add_button': 'btn btn-success'
+        'add_button': 'btn btn-success',
+        'table': 'table table-striped table-bordered table-hover'
     }
 
-    grid = SQLFORM.grid(db.feature_language,
-                        orderby=[db.feature_language.context_id, db.feature_language.feature_key],
-                        ui=ui_dict, 
-                        user_signature=False, # Set to True if using Auth
-                        csv=True)
+    # 3. Generate the grid
+    grid = SQLFORM.grid(
+        db.feature_language,
+        orderby=[db.feature_language.context_id, db.feature_language.feature_key],
+        ui=bootstrap_ui,  # Passing the dictionary here fixes the error
+        user_signature=False,
+        csv=True
+    )
     
     return dict(grid=grid)
