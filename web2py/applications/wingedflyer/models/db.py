@@ -548,3 +548,7 @@ INTERNAL_ORG:
     "performance_review_cycle": "quarterly"
 }
 """
+
+# In models/db.py
+db.feature_language.language_variant.requires = IS_IN_SET(['label', 'label_plural', 'description', 'call_to_action'])
+db.feature_language.feature_key.comment = "Internal key like 'participant' or 'instruction'"

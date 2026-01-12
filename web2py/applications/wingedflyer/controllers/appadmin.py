@@ -695,16 +695,38 @@ def d3_graph_model():
 # ## Language Mapping Management (New for your Context System)
 # ##########################################################
 def manage_language():
+    """Manage context-specific language strings"""
+    # 1. Representation for the foreign key
     db.feature_language.context_id.represent = lambda val, row: db.context[val].display_name if val else ""
     
-    # Import the actual dictionary object from the source code
-    from gluon.sqlhtml import grid_bootstrap3
-    
+    # 2. Manually define the REQUIRED dictionary keys.
+    # web2py's internal string formatting requires these specific keys to exist.
+    full_ui_dict = {
+        'header': '',
+        'main': '',
+        'footer': '',
+        'row': '',
+        'cornerall': '',
+        'cornertop': '',
+        'cornerbottom': '',
+        'button': 'btn btn-default',
+        'add_button': 'btn btn-success',
+        'delete_button': 'btn btn-danger',
+        'edit_button': 'btn btn-warning',
+        'search_button': 'btn btn-primary',
+        'widgetbutton': 'btn btn-default',
+        'headerer': '',
+        'pager_for': 'pagination',
+        'pager_info': 'pager_info pull-right'
+    }
+
+    # 3. Generate the grid
     grid = SQLFORM.grid(
         db.feature_language,
         orderby=[db.feature_language.context_id, db.feature_language.feature_key],
-        ui=grid_bootstrap3, # This dictionary has EVERY key the grid needs
+        ui=full_ui_dict,  # This is a dict, satisfying the type check
         user_signature=False,
         csv=True
     )
+    
     return dict(grid=grid)
