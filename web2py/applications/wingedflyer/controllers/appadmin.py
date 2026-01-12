@@ -694,7 +694,7 @@ def d3_graph_model():
 # ##########################################################
 # ## Language Mapping Management (New for your Context System)
 # ##########################################################
-def manage_language():
+def managelanguage():
     """Manage context-specific language strings"""
     # 1. Representation for readable context names
     db.feature_language.context_id.represent = lambda val, row: db.context[val].display_name if val else ""
