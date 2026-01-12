@@ -1,0 +1,65 @@
+{{extend 'layout.html'}}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>My {{=execution_signal_label_plural}}</h2>
+            <div class="btn-group">
+                <a href="{{=URL('dashboard')}}" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <a href="{{=URL('create_signal')}}" class="btn btn-primary">
+                    <i class="fa fa-plus"></i> Add New {{=execution_signal_label}}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Signal History (Last 50)</h4>
+                </div>
+                <div class="card-body">
+                    {{if signals:}}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Activity</th>
+                                        <th>Outcome</th>
+                                        <th>Note</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{for s in signals:}}
+                                        <tr class="{{='table-danger' if s.execution_signal.outcome == 'WORSE' else 'table-success' if s.execution_signal.outcome == 'BETTER' else ''}}">
+                                            <td>{{=s.execution_signal.signal_date.strftime('%Y-%m-%d')}}</td>
+                                            <td>{{=s.work_activity.activity_name if s.work_activity else '-'}}</td>
+                                            <td>
+                                                {{if s.execution_signal.outcome == 'BETTER':}}
+                                                    <span class="badge badge-success">BETTER</span>
+                                                {{elif s.execution_signal.outcome == 'WORSE':}}
+                                                    <span class="badge badge-danger">WORSE</span>
+                                                {{else:}}
+                                                    <span class="badge badge-secondary">AS EXPECTED</span>
+                                                {{pass}}
+                                            </td>
+                                            <td>{{=s.execution_signal.note if s.execution_signal.note else '-'}}</td>
+                                        </tr>
+                                    {{pass}}
+                                </tbody>
+                            </table>
+                        </div>
+                    {{else:}}
+                        <p class="text-muted">No signals recorded yet. 
+                            <a href="{{=URL('create_signal')}}">Add your first signal</a>
+                        </p>
+                    {{pass}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
