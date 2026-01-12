@@ -3,10 +3,10 @@ from gluon.tools import Auth
 import bcrypt
 from datetime import datetime, timedelta
 
-# Load configuration
+# 1. LOAD CONFIGURATION FIRST
 configuration = AppConfig(reload=True)
 
-# Database connection
+# 2. DEFINE THE DATABASE CONNECTION ONCE
 db = DAL(configuration.get('db.uri'),
          pool_size=configuration.get('db.pool_size'),
          migrate_enabled=configuration.get('db.migrate'),
