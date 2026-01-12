@@ -131,31 +131,31 @@ def index():
 
 
 # ##########################################################
-# ## MFI Management Functions
+# ## responsible Management Functions
 # ###########################################################
 
-def mfilist():
-    """List all MFIs"""
+def responsiblelist():
+    """List all responsibles"""
     if not databases:
         return dict(error="No database configured.", rows=[])
     
     db_name = sorted(databases.keys())[0]
     db = databases[db_name]
     
-    if "mfi" not in db.tables:
-        return dict(error="MFI table not found", rows=[])
+    if "responsible" not in db.tables:
+        return dict(error="responsible table not found", rows=[])
     
-    rows = db(db.mfi).select(orderby=db.mfi.name)
+    rows = db(db.responsible).select(orderby=db.responsible.name)
     return dict(rows=rows, db_name=db_name)
 
 
-def mfiedit():
-    """Edit an MFI record"""
+def responsibleedit():
+    """Edit an responsible record"""
     if not request.args(0):
-        session.flash = T('Invalid MFI ID')
-        redirect(URL('mfilist'))
+        session.flash = T('Invalid responsible ID')
+        redirect(URL('responsiblelist'))
     
-    mfi_id = request.args(0, cast=int)
+    responsible_id = request.args(0, cast=int)
     if not databases:
         session.flash = T('No database configured')
         redirect(URL('index'))
@@ -163,33 +163,33 @@ def mfiedit():
     db_name = sorted(databases.keys())[0]
     db = databases[db_name]
     
-    if "mfi" not in db.tables:
-        session.flash = T('MFI table not found')
+    if "responsible" not in db.tables:
+        session.flash = T('responsible table not found')
         redirect(URL('index'))
     
-    record = db.mfi(mfi_id)
+    record = db.responsible(responsible_id)
     if not record:
-        session.flash = T('MFI not found')
-        redirect(URL('mfilist'))
+        session.flash = T('responsible not found')
+        redirect(URL('responsiblelist'))
     
     # Create form for editing
-    form = SQLFORM(db.mfi, record, deletable=True, 
+    form = SQLFORM(db.responsible, record, deletable=True, 
                    delete_label=T('Check to delete'),
                    ignore_rw=ignore_rw,
                    showid=True)
     
     if form.accepts(request.vars, session):
-        session.flash = T('MFI updated successfully')
-        redirect(URL('mfilist'))
+        session.flash = T('responsible updated successfully')
+        redirect(URL('responsiblelist'))
     
-    # Get borrower count for this MFI
-    b2c_count = db(db.b2c.mfi_id == mfi_id).count() if 'b2c' in db.tables else 0
+    # Get borrower count for this responsible
+    participant_count = db(db.participant.responsible_id == responsible_id).count() if 'participant' in db.tables else 0
     
-    return dict(form=form, record=record, b2c_count=b2c_count)
+    return dict(form=form, record=record, participant_count=participant_count)
 
 
-def mficreate():
-    """Create a new MFI"""
+def responsiblecreate():
+    """Create a new responsible"""
     if not databases:
         session.flash = T('No database configured')
         redirect(URL('index'))
@@ -197,15 +197,15 @@ def mficreate():
     db_name = sorted(databases.keys())[0]
     db = databases[db_name]
     
-    if "mfi" not in db.tables:
-        session.flash = T('MFI table not found')
+    if "responsible" not in db.tables:
+        session.flash = T('responsible table not found')
         redirect(URL('index'))
     
-    form = SQLFORM(db.mfi, ignore_rw=ignore_rw)
+    form = SQLFORM(db.responsible, ignore_rw=ignore_rw)
     
     if form.accepts(request.vars, session):
-        session.flash = T('New MFI created successfully')
-        redirect(URL('mfilist'))
+        session.flash = T('New responsible created successfully')
+        redirect(URL('responsiblelist'))
     
     return dict(form=form)
 
