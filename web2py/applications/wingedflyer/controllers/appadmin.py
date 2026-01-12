@@ -129,82 +129,72 @@ def query_by_table_type(tablename, db, request=request):
 def index():
     return dict(databases=databases)
 
-
 # ##########################################################
-# ## responsible Management Functions
+# ## context-aware Management Functions
 # ###########################################################
 
 def responsiblelist():
-    """List all responsibles"""
-    if not databases:
-        return dict(error="No database configured.", rows=[])
+    """List all responsible entities with their context names"""
+    # Use 'db' directly as defined in your model file
+    if 'responsible' not in db.tables:
+        return dict(error="Responsible table not found", rows=[])
     
-    db_name = sorted(databases.keys())[0]
-    db = databases[db_name]
-    
-    if "responsible" not in db.tables:
-        return dict(error="responsible table not found", rows=[])
-    
-    rows = db(db.responsible).select(orderby=db.responsible.name)
-    return dict(rows=rows, db_name=db_name)
+    # Left join with context to show what type of entity each is
+    query = db.responsible.context_id == db.context.id
+    rows = db(query).select(
+        db.responsible.ALL,
+        db.context.display_name,
+        orderby=db.responsible.name
+    )
+    return dict(rows=rows)
 
 
 def responsibleedit():
-    """Edit an responsible record"""
-    if not request.args(0):
+    """Edit a responsible record with contextual metadata"""
+    responsible_id = request.args(0, cast=int)
+    if not responsible_id:
         session.flash = T('Invalid responsible ID')
         redirect(URL('responsiblelist'))
     
-    responsible_id = request.args(0, cast=int)
-    if not databases:
-        session.flash = T('No database configured')
-        redirect(URL('index'))
-    
-    db_name = sorted(databases.keys())[0]
-    db = databases[db_name]
-    
-    if "responsible" not in db.tables:
-        session.flash = T('responsible table not found')
-        redirect(URL('index'))
-    
     record = db.responsible(responsible_id)
     if not record:
-        session.flash = T('responsible not found')
+        session.flash = T('Responsible entity not found')
         redirect(URL('responsiblelist'))
     
-    # Create form for editing
-    form = SQLFORM(db.responsible, record, deletable=True, 
+    # Create form
+    # Note: password_hash is automatically handled by your model's _before_update hooks
+    form = SQLFORM(db.responsible, record, 
+                   deletable=True, 
                    delete_label=T('Check to delete'),
-                   ignore_rw=ignore_rw,
                    showid=True)
     
-    if form.accepts(request.vars, session):
-        session.flash = T('responsible updated successfully')
+    if form.process().accepted:
+        session.flash = T('Responsible updated successfully')
         redirect(URL('responsiblelist'))
     
-    # Get borrower count for this responsible
-    participant_count = db(db.participant.responsible_id == responsible_id).count() if 'participant' in db.tables else 0
+    # Contextual info: Get count of participants (formerly borrowers)
+    participant_count = 0
+    if 'participant' in db.tables:
+        participant_count = db(db.participant.responsible_id == record.id).count()
     
-    return dict(form=form, record=record, participant_count=participant_count)
+    # Get the context name for display
+    context_name = record.context_id.display_name if record.context_id else "No Context"
+    
+    return dict(form=form, record=record, participant_count=participant_count, context_name=context_name)
 
 
 def responsiblecreate():
-    """Create a new responsible"""
-    if not databases:
-        session.flash = T('No database configured')
+    """Create a new responsible entity"""
+    if 'responsible' not in db.tables:
+        session.flash = T('Responsible table not found')
         redirect(URL('index'))
     
-    db_name = sorted(databases.keys())[0]
-    db = databases[db_name]
+    # The form will automatically show a dropdown for context_id 
+    # because it is a reference field in your model.
+    form = SQLFORM(db.responsible)
     
-    if "responsible" not in db.tables:
-        session.flash = T('responsible table not found')
-        redirect(URL('index'))
-    
-    form = SQLFORM(db.responsible, ignore_rw=ignore_rw)
-    
-    if form.accepts(request.vars, session):
-        session.flash = T('New responsible created successfully')
+    if form.process().accepted:
+        session.flash = T('New responsible entity created')
         redirect(URL('responsiblelist'))
     
     return dict(form=form)
@@ -698,3 +688,15 @@ def d3_graph_model():
     response.files.append(URL('admin','static','js/d3.min.js'))
     response.files.append(URL('admin','static','js/d3_graph.js'))
     return dict(databases=databases, nodes=nodes, links=links)
+
+
+
+# ##########################################################
+# ## Language Mapping Management (New for your Context System)
+# ##########################################################
+
+def manage_language():
+    """Helper to manage the feature_language table based on context"""
+    grid = SQLFORM.grid(db.feature_language,
+                        orderby=[db.feature_language.context_id, db.feature_language.feature_key])
+    return dict(grid=grid)
