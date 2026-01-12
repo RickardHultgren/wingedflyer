@@ -1,0 +1,50 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Help & Documentation</h2>
+                    <p class="mb-0 text-muted">Context: {{=context_name}}</p>
+                </div>
+                <div class="card-body">
+                    <h4>Welcome to the {{=context_name}} Portal</h4>
+                    <p>This system allows you to manage participants and track their progress through execution signals and instructions.</p>
+
+                    <hr>
+
+                    <h5>Key Features:</h5>
+                    <ul>
+                        <li><strong>Dashboard:</strong> Overview of all your participants and their status</li>
+                        <li><strong>Participant Management:</strong> Create, edit, and monitor participants</li>
+                        <li><strong>Instructions:</strong> Send messages and receive responses from participants</li>
+                        <li><strong>Execution Signals:</strong> Track daily progress reports from participants</li>
+                        <li><strong>Work Activities:</strong> Monitor what participants are working on</li>
+                    </ul>
+
+                    <hr>
+
+                    <h5>Getting Started:</h5>
+                    <ol>
+                        <li>Create participant accounts from the dashboard</li>
+                        <li>Send initial instructions to orient participants</li>
+                        <li>Monitor execution signals to track progress</li>
+                        <li>Send follow-up instructions based on signals</li>
+                    </ol>
+
+                    <hr>
+
+                    <p class="text-muted">
+                        <small>For additional support, please contact your system administrator.</small>
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{=URL('dashboard')}}" class="btn btn-primary">
+                        <i class="fa fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,100 @@
+{{extend 'layout.html'}}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>{{=execution_signal_label_plural}} Overview (Last 7 Days)</h2>
+            <a href="{{=URL('dashboard')}}" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h3>{{=len(worse_signals)}}</h3>
+                    <p>Worse Signals</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h3>{{=len(better_signals)}}</h3>
+                    <p>Better Signals</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h3>{{=len(all_signals)}}</h3>
+                    <p>Total Signals</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>All Recent Signals</h4>
+                </div>
+                <div class="card-body">
+                    {{if all_signals:}}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Participant</th>
+                                        <th>Activity</th>
+                                        <th>Outcome</th>
+                                        <th>Note</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{for s in all_signals:}}
+                                        <tr class="{{='table-danger' if s.execution_signal.outcome == 'WORSE' else ''}}">
+                                            <td>{{=s.execution_signal.signal_date.strftime('%Y-%m-%d')}}</td>
+                                            <td>
+                                                <a href="{{=URL('participant', args=[s.participant.id])}}">
+                                                    {{=s.participant.real_name}}
+                                                </a>
+                                            </td>
+                                            <td>{{=s.work_activity.activity_name if s.work_activity else '-'}}</td>
+                                            <td>
+                                                {{if s.execution_signal.outcome == 'BETTER':}}
+                                                    <span class="badge badge-success">BETTER</span>
+                                                {{elif s.execution_signal.outcome == 'WORSE':}}
+                                                    <span class="badge badge-danger">WORSE</span>
+                                                {{else:}}
+                                                    <span class="badge badge-secondary">AS EXPECTED</span>
+                                                {{pass}}
+                                            </td>
+                                            <td>
+                                                <small>{{=s.execution_signal.note[:100] if s.execution_signal.note else '-'}}</small>
+                                            </td>
+                                            <td>
+                                                <a href="{{=URL('compose_instruction', args=[s.participant.id])}}" 
+                                                   class="btn btn-sm btn-info">
+                                                    Send Instruction
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {{pass}}
+                                </tbody>
+                            </table>
+                        </div>
+                    {{else:}}
+                        <p class="text-muted">No signals in the last 7 days.</p>
+                    {{pass}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
