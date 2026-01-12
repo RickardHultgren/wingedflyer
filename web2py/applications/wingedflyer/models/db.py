@@ -554,5 +554,7 @@ db.define_table('feature_language',
           requires=IS_IN_DB(db, 'context.id', '%(display_name)s')), # This creates the dropdown
     Field('feature_key', 'string'),
     # ... other fields
-)db.feature_language.language_variant.requires = IS_IN_SET(['label', 'label_plural', 'description', 'call_to_action'])
+)
+
+db.feature_language.language_variant.requires = IS_IN_SET(['label', 'label_plural', 'description', 'call_to_action'])
 db.feature_language.feature_key.comment = "Internal key like 'participant' or 'instruction'"
