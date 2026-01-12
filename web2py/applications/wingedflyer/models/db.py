@@ -3,7 +3,6 @@ from gluon.tools import Auth
 import bcrypt
 from datetime import datetime, timedelta
 
-
 # Load configuration
 configuration = AppConfig(reload=True)
 
