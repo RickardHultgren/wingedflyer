@@ -1,0 +1,29 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3>My Profile</h3>
+                    <p class="mb-0 text-muted">Update your personal information</p>
+                </div>
+                <div class="card-body">
+                    {{=form}}
+                    <hr>
+                    <div class="alert alert-info">
+                        <strong>Account Details:</strong><br>
+                        Context: {{=context_name}}<br>
+                        {{=participant_label}}: {{=participant.real_name}}<br>
+                        Responsible Entity: {{=session.responsible_name}}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{{=URL('dashboard')}}" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
