@@ -1,0 +1,210 @@
+{{extend 'layout.html'}}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>{{=participant.real_name}} <small class="text-muted">({{=participant_label}})</small></h2>
+            <p class="text-muted">Username: {{=participant.username}}</p>
+            <div class="btn-group">
+                <a href="{{=URL('dashboard')}}" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <a href="{{=URL('edit_participant', args=[participant.id])}}" class="btn btn-primary">
+                    <i class="fa fa-edit"></i> Edit Profile
+                </a>
+                <a href="{{=URL('compose_instruction', args=[participant.id])}}" class="btn btn-info">
+                    <i class="fa fa-envelope"></i> Send {{=instruction_label_plural}}
+                </a>
+                <a href="{{=URL('delete_participant', args=[participant.id])}}" 
+                   class="btn btn-danger"
+                   onclick="return confirm('Are you sure you want to delete this {{=participant_label.lower()}} and all associated data?');">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Profile & Metrics -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Profile Information</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th>Real Name:</th>
+                            <td>{{=participant.real_name}}</td>
+                        </tr>
+                        <tr>
+                            <th>Username:</th>
+                            <td>{{=participant.username}}</td>
+                        </tr>
+                        <tr>
+                            <th>Email:</th>
+                            <td>{{=participant.email or '-'}}</td>
+                        </tr>
+                        <tr>
+                            <th>Telephone:</th>
+                            <td>{{=participant.telephone or '-'}}</td>
+                        </tr>
+                        <tr>
+                            <th>Address:</th>
+                            <td>{{=participant.address or '-'}}</td>
+                        </tr>
+                        <tr>
+                            <th>Social Media:</th>
+                            <td>{{=participant.social_media or '-'}}</td>
+                        </tr>
+                        <tr>
+                            <th>Created:</th>
+                            <td>{{=participant.created_on.strftime('%Y-%m-%d')}}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Context-Specific Metrics</h4>
+                </div>
+                <div class="card-body">
+                    {{=metrics_form}}
+                    <hr>
+                    <div class="alert alert-info">
+                        <strong>{{=metric1_label}}:</strong> {{=participant.amount_borrowed}}<br>
+                        <strong>{{=metric2_label}}:</strong> {{=participant.amount_repaid_b2c_reported}}<br>
+                        <strong>Balance/Remaining:</strong> {{=balance}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Activities & Signals -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>{{=work_activity_label}} Activities</h4>
+                </div>
+                <div class="card-body">
+                    {{if work_activities:}}
+                        <ul class="list-group">
+                            {{for activity in work_activities:}}
+                                <li class="list-group-item {{='' if activity.is_active else 'list-group-item-secondary'}}">
+                                    <strong>{{=activity.activity_name}}</strong>
+                                    {{if not activity.is_active:}}
+                                        <span class="badge badge-secondary">Inactive</span>
+                                    {{pass}}
+                                    {{if activity.description:}}
+                                        <br><small>{{=activity.description}}</small>
+                                    {{pass}}
+                                </li>
+                            {{pass}}
+                        </ul>
+                    {{else:}}
+                        <p class="text-muted">No activities recorded yet.</p>
+                    {{pass}}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Recent {{=execution_signal_label}} Signals (Last 30 Days)</h4>
+                </div>
+                <div class="card-body">
+                    {{if recent_signals:}}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Activity</th>
+                                        <th>Outcome</th>
+                                        <th>Note</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{for s in recent_signals:}}
+                                        <tr>
+                                            <td>{{=s.execution_signal.signal_date.strftime('%Y-%m-%d')}}</td>
+                                            <td>{{=s.work_activity.activity_name if s.work_activity else '-'}}</td>
+                                            <td>
+                                                {{if s.execution_signal.outcome == 'BETTER':}}
+                                                    <span class="badge badge-success">BETTER</span>
+                                                {{elif s.execution_signal.outcome == 'WORSE':}}
+                                                    <span class="badge badge-danger">WORSE</span>
+                                                {{else:}}
+                                                    <span class="badge badge-secondary">AS EXPECTED</span>
+                                                {{pass}}
+                                            </td>
+                                            <td>
+                                                <small>{{=s.execution_signal.note[:50] if s.execution_signal.note else '-'}}</small>
+                                            </td>
+                                        </tr>
+                                    {{pass}}
+                                </tbody>
+                            </table>
+                        </div>
+                    {{else:}}
+                        <p class="text-muted">No signals recorded in the last 30 days.</p>
+                    {{pass}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{=instruction_label_plural}} Sent to This {{=participant_label}}</h4>
+                </div>
+                <div class="card-body">
+                    {{if participant_instructions:}}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th>Sent</th>
+                                        <th>Status</th>
+                                        <th>Response</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{for msg in participant_instructions:}}
+                                        <tr>
+                                            <td>
+                                                <a href="{{=URL('instruction_details', args=[msg.instruction.id])}}">
+                                                    {{=msg.instruction.subject}}
+                                                </a>
+                                            </td>
+                                            <td>{{=msg.instruction.created_on.strftime('%Y-%m-%d %H:%M')}}</td>
+                                            <td>
+                                                {{if msg.instruction_recipient.is_read:}}
+                                                    <span class="badge badge-success">Read</span>
+                                                {{else:}}
+                                                    <span class="badge badge-secondary">Unread</span>
+                                                {{pass}}
+                                            </td>
+                                            <td>
+                                                {{if msg.instruction_recipient.response:}}
+                                                    {{=msg.instruction_recipient.response}}
+                                                {{else:}}
+                                                    <span class="text-muted">-</span>
+                                                {{pass}}
+                                            </td>
+                                        </tr>
+                                    {{pass}}
+                                </tbody>
+                            </table>
+                        </div>
+                    {{else:}}
+                        <p class="text-muted">No {{=instruction_label_plural.lower()}} sent to this {{=participant_label.lower()}} yet.</p>
+                    {{pass}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
