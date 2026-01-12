@@ -547,7 +547,7 @@ INTERNAL_ORG:
     "reporting_hierarchy_depth": 3,
     "performance_review_cycle": "quarterly"
 }
-"""
+
 db.define_table('feature_language',
     Field('context_id', 'reference context', 
           label=T('Context'),
@@ -558,3 +558,4 @@ db.define_table('feature_language',
 
 db.feature_language.language_variant.requires = IS_IN_SET(['label', 'label_plural', 'description', 'call_to_action'])
 db.feature_language.feature_key.comment = "Internal key like 'participant' or 'instruction'"
+"""
