@@ -1,0 +1,24 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Create New {{=participant_label}}</h3>
+                    <p class="mb-0 text-muted">
+                        Current: {{=current_count}} / {{=max_accounts}} {{=participant_label_plural.lower()}}
+                    </p>
+                </div>
+                <div class="card-body">
+                    {{=form}}
+                </div>
+                <div class="card-footer">
+                    <a href="{{=URL('dashboard')}}" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
