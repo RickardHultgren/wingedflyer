@@ -696,7 +696,12 @@ def d3_graph_model():
 # ##########################################################
 
 def manage_language():
-    """Helper to manage the feature_language table based on context"""
+    """Manage context-specific language strings"""
+    db.feature_language.context_id.represent = lambda val, row: db.context[val].display_name
+    
     grid = SQLFORM.grid(db.feature_language,
-                        orderby=[db.feature_language.context_id, db.feature_language.feature_key])
+                        orderby=[db.feature_language.context_id, db.feature_language.feature_key],
+                        ui='bootstrap3', # Ensures it matches your CSS
+                        csv=True)
+    
     return dict(grid=grid)
