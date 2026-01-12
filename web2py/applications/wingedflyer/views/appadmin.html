@@ -36,16 +36,29 @@ jQuery(document).ready(function(){
     </div>
 
     <hr/>
+    <h3>{{=T("Available Databases and Tables")}}</h3>
+    {{if 'databases' in globals():}}
+        <table class="table table-striped">
+            {{for db_name in sorted(databases):}}
+                {{for table in databases[db_name].tables:}}
+                <tr>
+                    <td>{{=db_name}}.{{=table}}</td>
+                    <td class="text-right">
+                        <a href="{{=URL('select', args=[db_name], vars=dict(query='%s.%s.id>0' % (db_name, table)))}}" class="btn btn-sm btn-default">{{=T('view rows')}}</a>
+                    </td>
+                </tr>
+                {{pass}}
+            {{pass}}
+        </table>
+    {{pass}}
 
-    <h3>{{=T("Available Tables")}}</h3>
-    {{elif request.function=='responsiblelist':}}
+  {{elif request.function=='responsiblelist':}}
     <h2>{{=T("Responsible Entities")}}</h2>
-
     {{if 'error' in globals() and error:}}
       <div class="alert alert-danger">{{=error}}</div>
     {{elif rows:}}
       <div class="table-responsive">
-        <table class="table table-striped table-bordered table-hover">
+        <table class="table table-striped table-bordered table-hover sortable">
           <thead class="thead-dark">
             <tr>
               <th>{{=T("Name")}}</th>
@@ -81,66 +94,52 @@ jQuery(document).ready(function(){
     {{pass}}
 
     <div class="my-3">
-      <a class="btn btn-success btn-lg" href="{{=URL('responsiblecreate')}}">
-        <i class="glyphicon glyphicon-plus"></i> {{=T("Add New Responsible")}}
-      </a>
-      <a class="btn btn-secondary" href="{{=URL('index')}}">
-        <i class="glyphicon glyphicon-arrow-left"></i> {{=T("Back to Admin")}}
-      </a>
+      <a class="btn btn-success" href="{{=URL('responsiblecreate')}}">{{=T("Add New Responsible")}}</a>
+      <a class="btn btn-secondary" href="{{=URL('index')}}">{{=T("Back to Admin")}}</a>
     </div>
 
   {{elif request.function=='responsibleedit':}}
     <h2>{{=T("Edit Responsible Entity")}}</h2>
-    
     {{if record:}}
       <div class="alert alert-info">
-        <h4>{{=T("Entity Info")}}</h4>
-        <ul style="margin-bottom: 0;">
-          <li><strong>{{=T("Context:")}} </strong>{{=context_name}}</li>
-          <li><strong>{{=T("Current Participants:")}} </strong>
-            <span class="badge badge-primary">{{=participant_count}}</span>
-          </li>
-        </ul>
+        <strong>{{=T("Context:")}}</strong> {{=context_name}} | 
+        <strong>{{=T("Participants:")}}</strong> <span class="badge">{{=participant_count}}</span>
       </div>
-
       <div class="panel panel-default">
-        <div class="panel-heading"><h3 class="panel-title">{{=T("Profile Details")}}</h3></div>
-        <div class="panel-body">
-          <div class="alert alert-warning">
-            {{=T("Leave password blank to keep current.")}}
-          </div>
-          {{=form}}
-        </div>
+        <div class="panel-body">{{=form}}</div>
       </div>
     {{pass}}
-
-    <div class="my-3">
-      <a class="btn btn-secondary" href="{{=URL('responsiblelist')}}">
-        <i class="glyphicon glyphicon-arrow-left"></i> {{=T("Back to List")}}
-      </a>
-    </div>
+    <a class="btn btn-secondary" href="{{=URL('responsiblelist')}}">{{=T("Back to List")}}</a>
 
   {{elif request.function=='responsiblecreate':}}
     <h2>{{=T("Register New Responsible Entity")}}</h2>
-    
     <div class="panel panel-primary">
-      <div class="panel-heading"><h3 class="panel-title">{{=T("Registration")}}</h3></div>
+      <div class="panel-body">{{=form}}</div>
+    </div>
+    <a class="btn btn-secondary" href="{{=URL('responsiblelist')}}">{{=T("Back to List")}}</a>
+
+  {{elif request.function == 'manage_language':}}
+    <h2>{{=T("Feature Language Mappings")}}</h2>
+    <div class="panel panel-default">
       <div class="panel-body">
         <div class="alert alert-info">
-          {{=T("Select the operational context (Microfinance, Coaching, etc.) to apply correct rules.")}}
+          <strong>{{=T("Guide:")}}</strong> {{=T("label (Singular), label_plural (Plural), call_to_action (Buttons)")}}
         </div>
-        {{=form}}
+        {{=grid}}
       </div>
     </div>
-
-    <div class="my-3">
-      <a class="btn btn-secondary" href="{{=URL('responsiblelist')}}">
-        <i class="glyphicon glyphicon-arrow-left"></i> {{=T("Back to List")}}
-      </a>
-    </div>
+    <a class="btn btn-secondary" href="{{=URL('index')}}">{{=T("Back")}}</a>
 
   {{elif request.function in ['select', 'insert', 'update']:}}
-    {{pass}}
+    <h2>{{=T("Database Task:")}} {{=request.function.capitalize()}}</h2>
+    <div class="well">
+        {{=form if 'form' in globals() else ''}}
+        {{=grid if 'grid' in globals() else ''}}
+        {{=rows if 'rows' in globals() and not isinstance(rows, list) else ''}}
+    </div>
+    <a class="btn btn-secondary" href="{{=URL('index')}}">{{=T("Back to Admin")}}</a>
+
+  {{pass}}
 
   </div>
 </div>
