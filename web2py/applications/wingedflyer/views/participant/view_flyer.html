@@ -1,0 +1,35 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-5">
+    {{if defined('error'):}}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-danger">
+                    {{=error}}
+                </div>
+                <a href="{{=URL('default', 'index')}}" class="btn btn-primary">Go to Homepage</a>
+            </div>
+        </div>
+    {{else:}}
+        <div class="row">
+            <div class="col-md-10 offset-md-1">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>{{=flyer.title}}</h2>
+                        <p class="mb-0 text-muted">
+                            Published by: {{=participant.real_name}}<br>
+                            Views: {{=flyer.view_count}} | 
+                            Created: {{=flyer.created_on.strftime('%Y-%m-%d')}}
+                        </p>
+                    </div>
+                    <div class="card-body">
+                        <div style="white-space: pre-wrap;">{{=flyer.thecontent}}</div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>Last updated: {{=flyer.updated_on.strftime('%Y-%m-%d %H:%M')}}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {{pass}}
+</div>

@@ -1,0 +1,82 @@
+
+# ========================================================================
+# views/participant/flyers.html
+# ========================================================================
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>My {{=flyer_label_plural}}</h2>
+            <div class="btn-group">
+                <a href="{{=URL('dashboard')}}" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <a href="{{=URL('create_flyer')}}" class="btn btn-primary">
+                    <i class="fa fa-plus"></i> Create New Flyer
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            {{if flyers:}}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Created</th>
+                                <th>Updated</th>
+                                <th>Public</th>
+                                <th>Views</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{for flyer in flyers:}}
+                                <tr>
+                                    <td><strong>{{=flyer.title}}</strong></td>
+                                    <td>{{=flyer.created_on.strftime('%Y-%m-%d')}}</td>
+                                    <td>{{=flyer.updated_on.strftime('%Y-%m-%d')}}</td>
+                                    <td>
+                                        {{if flyer.is_public:}}
+                                            <span class="badge badge-success">Public</span>
+                                        {{else:}}
+                                            <span class="badge badge-secondary">Private</span>
+                                        {{pass}}
+                                    </td>
+                                    <td>{{=flyer.view_count}}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            {{if flyer.is_public:}}
+                                                <a href="{{=URL('view_flyer', args=[flyer.id])}}" 
+                                                   class="btn btn-sm btn-info" target="_blank">
+                                                    <i class="fa fa-eye"></i> View
+                                                </a>
+                                            {{pass}}
+                                            <a href="{{=URL('edit_flyer', args=[flyer.id])}}" 
+                                               class="btn btn-sm btn-primary">
+                                                <i class="fa fa-edit"></i> Edit
+                                            </a>
+                                            <a href="{{=URL('delete_flyer', args=[flyer.id])}}" 
+                                               class="btn btn-sm btn-danger"
+                                               onclick="return confirm('Delete this flyer?');">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {{pass}}
+                        </tbody>
+                    </table>
+                </div>
+            {{else:}}
+                <div class="alert alert-info">
+                    No flyers yet. <a href="{{=URL('create_flyer')}}">Create your first flyer</a>
+                </div>
+            {{pass}}
+        </div>
+    </div>
+</div>

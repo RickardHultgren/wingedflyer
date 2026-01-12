@@ -1,0 +1,62 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Help & Documentation</h2>
+                    <p class="mb-0 text-muted">Context: {{=context_name}}</p>
+                </div>
+                <div class="card-body">
+                    <h4>Welcome to Your Participant Portal</h4>
+                    <p>This portal allows you to manage your activities, send signals about your progress, and communicate with your {{=session.responsible_name}}.</p>
+
+                    <hr>
+
+                    <h5>Key Features:</h5>
+                    <ul>
+                        <li><strong>Dashboard:</strong> Overview of your activities, signals, and instructions</li>
+                        <li><strong>Work Activities:</strong> Create and manage your activities or goals</li>
+                        <li><strong>Execution Signals:</strong> Report daily progress on your activities</li>
+                        <li><strong>Instructions:</strong> Receive and respond to messages from your responsible entity</li>
+                        <li><strong>Flyers:</strong> Create and publish public content</li>
+                        <li><strong>Profile:</strong> Manage your personal information</li>
+                    </ul>
+
+                    <hr>
+
+                    <h5>Getting Started:</h5>
+                    <ol>
+                        <li>Create your work activities or goals</li>
+                        <li>Send regular execution signals to report progress</li>
+                        <li>Check your inbox regularly for instructions</li>
+                        <li>Respond to instructions that require responses</li>
+                        <li>Keep your profile information up to date</li>
+                    </ol>
+
+                    <hr>
+
+                    <h5>Understanding Execution Signals:</h5>
+                    <div class="alert alert-info">
+                        <p><strong>BETTER:</strong> Your execution exceeded your own expectations</p>
+                        <p><strong>AS EXPECTED:</strong> Your execution met your expectations</p>
+                        <p><strong>WORSE:</strong> Your execution fell short of your expectations</p>
+                        <p class="mb-0">These signals help you and your responsible entity track progress honestly and adjust support as needed.</p>
+                    </div>
+
+                    <hr>
+
+                    <p class="text-muted">
+                        <small>For additional support, please contact your responsible entity: {{=session.responsible_name}}</small>
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{=URL('dashboard')}}" class="btn btn-primary">
+                        <i class="fa fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
