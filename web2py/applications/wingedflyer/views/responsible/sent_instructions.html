@@ -1,0 +1,62 @@
+{{extend 'layout.html'}}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>Sent {{=instruction_label_plural}}</h2>
+            <a href="{{=URL('compose_instruction')}}" class="btn btn-primary">
+                <i class="fa fa-plus"></i> Compose New {{=instruction_label}}
+            </a>
+            <a href="{{=URL('dashboard')}}" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            {{if instruction_data:}}
+                {{for item in instruction_data:}}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5>{{=item['instruction'].subject}}</h5>
+                                    <small class="text-muted">
+                                        Sent: {{=item['instruction'].created_on.strftime('%Y-%m-%d %H:%M')}} 
+                                        by {{=item['instruction'].sent_by}}
+                                    </small>
+                                </div>
+                                <div class="col-md-4 text-right">
+                                    <span class="badge badge-primary">
+                                        {{=item['total_recipients']}} Recipients
+                                    </span>
+                                    <span class="badge badge-success">
+                                        {{=item['read_count']}} Read
+                                    </span>
+                                    {{if item['instruction'].response_template != 'NONE':}}
+                                        <span class="badge badge-info">
+                                            {{=item['responded_count']}} Responded
+                                        </span>
+                                    {{pass}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p>{{=item['instruction'].instruction_text[:200]}}{{='...' if len(item['instruction'].instruction_text) > 200 else ''}}</p>
+                            <a href="{{=URL('instruction_details', args=[item['instruction'].id])}}" 
+                               class="btn btn-sm btn-primary">
+                                View Details & Responses
+                            </a>
+                        </div>
+                    </div>
+                {{pass}}
+            {{else:}}
+                <div class="alert alert-info">
+                    No {{=instruction_label_plural.lower()}} sent yet. 
+                    <a href="{{=URL('compose_instruction')}}">Send your first {{=instruction_label.lower()}}</a>
+                </div>
+            {{pass}}
+        </div>
+    </div>
+</div>
