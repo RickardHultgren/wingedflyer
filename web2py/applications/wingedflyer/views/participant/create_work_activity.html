@@ -1,0 +1,21 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Create New {{=work_activity_label}}</h3>
+                </div>
+                <div class="card-body">
+                    {{=form}}
+                </div>
+                <div class="card-footer">
+                    <a href="{{=URL('work_activities')}}" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
