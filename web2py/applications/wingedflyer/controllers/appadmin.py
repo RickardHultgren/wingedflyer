@@ -728,9 +728,11 @@ def managelanguage():
         user_signature=False,
         csv=True
     )
-        
-    def context_repr(val, row):
-        rec = db.context(val)
-        return rec.display_name if rec else ''
+    
+    return dict(grid=grid)
 
-    db.feature_language.context_id.represent = context_repr
+def context_repr(val, row):
+    rec = db.context(val)
+    return rec.display_name if rec else ''
+
+db.feature_language.context_id.represent = context_repr
