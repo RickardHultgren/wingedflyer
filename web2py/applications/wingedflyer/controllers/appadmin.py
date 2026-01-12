@@ -696,11 +696,11 @@ def d3_graph_model():
 # ##########################################################
 def manage_language():
     """Manage context-specific language strings"""
-    # Improve readability for the grid
+    # 1. Improve grid readability
     db.feature_language.context_id.represent = lambda val, row: db.context[val].display_name if val else ""
     
-    # We define a complete dictionary to satisfy both the 
-    # isinstance(ui, dict) check and the string formatting requirements.
+    # 2. Define the COMPLETE dictionary. 
+    # This satisfies the type check AND provides the missing 'header' key.
     full_ui = {
         'header': '',
         'main': '',
@@ -720,10 +720,11 @@ def manage_language():
         'pager_info': 'pager_info pull-right'
     }
 
+    # 3. Call the grid with the dictionary
     grid = SQLFORM.grid(
         db.feature_language,
         orderby=[db.feature_language.context_id, db.feature_language.feature_key],
-        ui=full_ui,  # Passing the dictionary directly
+        ui=full_ui, 
         user_signature=False,
         csv=True
     )
