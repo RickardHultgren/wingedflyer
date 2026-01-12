@@ -697,11 +697,24 @@ def d3_graph_model():
 
 def manage_language():
     """Manage context-specific language strings"""
+    # Make the context_id look readable in the grid
     db.feature_language.context_id.represent = lambda val, row: db.context[val].display_name
     
+    # Define the UI as a dictionary (standard web2py Bootstrap 3 mapping)
+    bootstrap3_ui = dict(
+        widgetbutton='btn btn-default btn-secondary',
+        headerer='active',
+        pager_for='pagination',
+        pager_info='pager_info pull-right',
+        search_button='btn btn-primary',
+        delete_button='btn btn-danger',
+        edit_button='btn btn-warning',
+        add_button='btn btn-success'
+    )
+
     grid = SQLFORM.grid(db.feature_language,
                         orderby=[db.feature_language.context_id, db.feature_language.feature_key],
-                        ui='bootstrap3', # Ensures it matches your CSS
+                        ui=bootstrap3_ui, # Now passing a dictionary
                         csv=True)
     
     return dict(grid=grid)
