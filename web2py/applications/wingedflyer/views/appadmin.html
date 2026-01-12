@@ -32,6 +32,26 @@ jQuery(document).ready(function(){
       </a>
       <a class="btn btn-info btn-lg" href="{{=URL('manage_language')}}">
         <i class="glyphicon glyphicon-globe"></i> {{=T("Manage Language Mappings")}}
+
+      {{if 'databases' in globals():}}
+        <table class="table table-striped">
+            {{for db_name in sorted(databases):}}
+                {{for table in databases[db_name].tables:}}
+                <tr>
+                    <td style="vertical-align: middle;"><strong>{{=table}}</strong></td>
+                    <td class="text-right">
+                        <a href="{{=URL('select', args=[db_name], vars=dict(query='%s.%s.id>0' % (db_name, table)))}}" class="btn btn-sm btn-default">
+                           <i class="glyphicon glyphicon-search"></i> {{=T('view rows')}}
+                        </a>
+                        <a href="{{=URL('insert', args=[db_name, table])}}" class="btn btn-sm btn-success">
+                           <i class="glyphicon glyphicon-plus"></i> {{=T('insert new')}}
+                        </a>
+                    </td>
+                </tr>
+                {{pass}}
+            {{pass}}
+        </table>
+      {{pass}}  
       </a>
     </div>
 
