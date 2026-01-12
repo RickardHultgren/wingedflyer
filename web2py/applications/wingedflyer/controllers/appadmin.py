@@ -697,28 +697,31 @@ def d3_graph_model():
 
 def manage_language():
     """Manage context-specific language strings"""
-    # 1. Improve readability: Show the context name instead of the ID
+    # 1. Improve readability
     db.feature_language.context_id.represent = lambda val, row: db.context[val].display_name if val else ""
     
-    # 2. Define the UI dictionary to satisfy the RuntimeError
-    # This maps web2py grid elements to Bootstrap classes
-    bootstrap_ui = {
+    # 2. Get the standard web2py UI dictionary as a base
+    # This ensures ALL required keys (like 'header') exist
+    from gluon.sqlhtml import grid_bootstrap3
+    import copy
+    
+    # Start with a full set of working keys
+    ui_dict = copy.copy(grid_bootstrap3)
+    
+    # 3. Apply your Bootstrap button overrides
+    ui_dict.update({
         'widgetbutton': 'btn btn-default btn-secondary',
-        'headerer': 'active',
-        'pager_for': 'pagination',
-        'pager_info': 'pager_info pull-right',
         'search_button': 'btn btn-primary',
         'delete_button': 'btn btn-danger',
         'edit_button': 'btn btn-warning',
-        'add_button': 'btn btn-success',
-        'table': 'table table-striped table-bordered table-hover'
-    }
+        'add_button': 'btn btn-success'
+    })
 
-    # 3. Generate the grid
+    # 4. Generate the grid
     grid = SQLFORM.grid(
         db.feature_language,
         orderby=[db.feature_language.context_id, db.feature_language.feature_key],
-        ui=bootstrap_ui,  # Passing the dictionary here fixes the error
+        ui=ui_dict, 
         user_signature=False,
         csv=True
     )
