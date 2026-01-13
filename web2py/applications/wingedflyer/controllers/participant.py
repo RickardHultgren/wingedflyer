@@ -615,8 +615,8 @@ def view_flyer():
     # 2. TRACK VIEW (This is where line 629 was crashing)
     db.flyer_view.insert(
         flyer_id=flyer_id,
-        viewer_ip=request.client,
-        b2c_id=participant_id   # Now Python knows what b2c_id is!
+        viewer_ip=request.client#,
+        #b2c_id=participant_id   # Now Python knows what b2c_id is!
     )
 
     # ... rest of the function ...
@@ -626,7 +626,7 @@ def view_flyer():
         flyer=flyer,
         participant=participant,
         flyer_label=flyer_label,
-        b2c_id=b2c_id
+        b2c_id=participant
     )
 
 
