@@ -8,6 +8,7 @@ Context-aware controller for participant self-service across multiple domains
 import bcrypt
 from datetime import datetime, timedelta
 
+is_active = (not globals().get('b2c_id'))
 
 # ---------------------------------------------------------------------
 # CONTEXT HELPER FUNCTIONS
