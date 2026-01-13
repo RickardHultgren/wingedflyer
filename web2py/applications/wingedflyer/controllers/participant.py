@@ -148,7 +148,8 @@ def dashboard():
         session.clear()
         redirect(URL('login'))
 
-    # 1. Fetch ALL labels (Singular and Plural) to satisfy the HTML View
+    # 1. Fetch ALL labels (Singular AND Plural) to satisfy the View
+    # The view specifically asks for 'execution_signal_label' on line 255
     work_activity_label = get_language(session.context_id, 'work_activity', 'label')
     work_activity_label_plural = get_language(session.context_id, 'work_activity', 'label_plural')
     
@@ -160,13 +161,12 @@ def dashboard():
     
     responsible_label = get_language(session.context_id, 'responsible', 'label')
 
-    # 2. Metrics & Logic
+    # 2. Queries
     work_activities = db(
         (db.work_activity.participant_id == session.participant_id) &
         (db.work_activity.context_id == session.context_id)
     ).select(orderby=~db.work_activity.is_active|db.work_activity.activity_name)
 
-    # Date math
     seven_days_ago = (datetime.now() - timedelta(days=7)).date()
 
     recent_signals = db(
@@ -183,7 +183,22 @@ def dashboard():
 
     unread_instructions = db(
         (db.instruction_recipient.participant_id == session.participant_id) &
+        (db.instruction_recipient.context_id == session.context_id) &
         (db.instruction_recipient.is_read == False)
+    ).select(
+        db.instruction_recipient.ALL,
+        db.instruction.ALL,
+        left=db.instruction.on(db.instruction_recipient.instruction_id == db.instruction.id),
+        orderby=~db.instruction.created_on,
+        limitby=(0, 5)
+    )
+
+    pending_responses = db(
+        (db.instruction_recipient.participant_id == session.participant_id) &
+        (db.instruction_recipient.context_id == session.context_id) &
+        (db.instruction_recipient.response == None) &
+        (db.instruction.id == db.instruction_recipient.instruction_id) &
+        (db.instruction.response_template != 'NONE')
     ).select(
         db.instruction_recipient.ALL,
         db.instruction.ALL,
@@ -191,18 +206,11 @@ def dashboard():
         orderby=~db.instruction.created_on
     )
 
-    pending_responses = db(
-        (db.instruction_recipient.participant_id == session.participant_id) &
-        (db.instruction_recipient.response == None) &
-        (db.instruction.id == db.instruction_recipient.instruction_id) &
-        (db.instruction.response_template != 'NONE')
-    ).select(db.instruction_recipient.ALL, db.instruction.ALL)
-
-    # Context-specific metrics
+    # 3. Metrics & Context Labels
     metric1_label = get_language(session.context_id, 'metric_allocated', 'label') or "Allocated"
     metric2_label = get_language(session.context_id, 'metric_completed', 'label') or "Completed"
     
-    # Ensure numerical values exist to avoid TypeError
+    # Safety check for calculation: use 0 if values are None
     borrowed = participant_record.amount_borrowed or 0
     repaid = participant_record.amount_repaid_b2c_reported or 0
     balance = borrowed - repaid
@@ -216,18 +224,19 @@ def dashboard():
         balance=balance,
         context_name=session.context_name,
         responsible_name=session.responsible_name,
-        # Labels sent to view
+        # Singular Labels
         work_activity_label=work_activity_label,
-        work_activity_label_plural=work_activity_label_plural,
         execution_signal_label=execution_signal_label,
-        execution_signal_label_plural=execution_signal_label_plural,
         instruction_label=instruction_label,
-        instruction_label_plural=instruction_label_plural,
         responsible_label=responsible_label,
+        # Plural Labels
+        work_activity_label_plural=work_activity_label_plural,
+        execution_signal_label_plural=execution_signal_label_plural,
+        instruction_label_plural=instruction_label_plural,
+        # Metrics
         metric1_label=metric1_label,
         metric2_label=metric2_label
     )
-    
 # ---------------------------------------------------------------------
 # WORK ACTIVITIES
 # ---------------------------------------------------------------------
