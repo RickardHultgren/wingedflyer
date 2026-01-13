@@ -608,6 +608,7 @@ def view_flyer():
     # 1. DEFINE b2c_id HERE (The missing piece)
     # We look for it in the URL variables; if not there, it's None
     b2c_id = request.vars.b2c_id or None
+    participant_id = request.vars.b2c_id or None
 
     flyer = db.flyer(flyer_id)
     # ... logic for public check ...
@@ -626,7 +627,7 @@ def view_flyer():
         flyer=flyer,
         participant=participant,
         flyer_label=flyer_label,
-        b2c_id=participant
+        b2c_id=participant_id
     )
 
 
