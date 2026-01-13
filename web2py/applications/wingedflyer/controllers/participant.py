@@ -650,34 +650,29 @@ def view_flyer():
 
 @participant_requires_login
 def profile():
-    """View and edit participant profile"""
     participant_record = db.participant(session.participant_id)
-
-    # 1. Fetch the context name from the database
-    # This prevents the NameError: context_name is not defined
-    context_row = db.context(session.context_id)
-    context_name = context_row.name if context_row else "Default Context"
-
-    form = SQLFORM(db.participant, participant_record,
-                   fields=['real_name', 'username', 'password_hash', 'address',
-                          'telephone', 'email', 'social_media'])
+    
+    # Secure field list (removed password_hash)
+    fields = ['real_name', 'username', 'address', 'telephone', 'email', 'social_media']
+    form = SQLFORM(db.participant, participant_record, fields=fields)
 
     if form.process().accepted:
         session.participant_name = form.vars.real_name
-        session.flash = "Profile updated successfully"
+        response.flash = "Profile updated" # Use response.flash for immediate feedback
         redirect(URL('profile'))
 
-    participant_label = get_language(session.context_id, 'participant', 'label')
+    # Context name safety check
+    context_row = db.context(session.context_id)
+    # Use .get() or check for 'display_name' vs 'name' based on your db.py
+    context_name = context_row.get('display_name') or context_row.get('name') or "Default Context"
 
-    # 2. Add both context_name and b2c_id to the return dict
     return dict(
         form=form,
         participant=participant_record,
-        participant_label=participant_label,
-        context_name=context_name,        # Fixes current error
-        b2c_id=session.participant_id    # Fixes sidebar error
+        participant_label=get_language(session.context_id, 'participant', 'label'),
+        context_name=context_name,
+        b2c_id=session.participant_id 
     )
-
 
 # ---------------------------------------------------------------------
 # HELP / DOCUMENTATION
