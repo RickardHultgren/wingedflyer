@@ -616,7 +616,7 @@ def view_flyer():
     db.flyer_view.insert(
         flyer_id=flyer_id,
         viewer_ip=request.client,
-        b2c_id=b2c_id   # Now Python knows what b2c_id is!
+        b2c_id=participant_id   # Now Python knows what b2c_id is!
     )
 
     # ... rest of the function ...
@@ -629,7 +629,7 @@ def view_flyer():
         b2c_id=b2c_id
     )
 
-    
+
 
     participant = db.participant(flyer.participant_id)
 
