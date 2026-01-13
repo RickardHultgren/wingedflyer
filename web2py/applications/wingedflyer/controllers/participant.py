@@ -653,6 +653,10 @@ def profile():
     """View and edit participant profile"""
     participant_record = db.participant(session.participant_id)
 
+    # Fetch the context name to prevent the NameError
+    context_record = db.context(session.context_id)
+    context_name = context_record.name if context_record else "Unknown"
+
     form = SQLFORM(db.participant, participant_record,
                    fields=['real_name', 'username', 'password_hash', 'address',
                           'telephone', 'email', 'social_media'])
@@ -667,7 +671,9 @@ def profile():
     return dict(
         form=form,
         participant=participant_record,
-        participant_label=participant_label
+        participant_label=participant_label,
+        context_name=context_name,  # <--- Added this
+        b2c_id=session.participant_id # <--- Added this to satisfy sidebar logic
     )
 
 
