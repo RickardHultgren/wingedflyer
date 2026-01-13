@@ -1,35 +1,71 @@
 {{extend 'layout.html'}}
 
-<div class="container mt-5">
-    {{if defined('error'):}}
-        <div class="row">
-            <div class="col-md-12">
-                <div class="alert alert-danger">
-                    {{=error}}
+<div class="container py-5">
+    {{# Use globals().get() to safely check for variables without NameErrors}}
+    {{error_msg = globals().get('error')}}
+    
+    {{if error_msg:}}
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <div class="alert alert-warning border-0 shadow-sm">
+                    <h4 class="alert-heading">Notice</h4>
+                    <p>{{=error_msg}}</p>
                 </div>
-                <a href="{{=URL('default', 'index')}}" class="btn btn-primary">Go to Homepage</a>
+                <a href="{{=URL('default', 'index')}}" class="btn btn-outline-primary px-4">
+                    Return to Homepage
+                </a>
             </div>
         </div>
-    {{else:}}
+        
+    {{elif globals().get('flyer'):}}
         <div class="row">
-            <div class="col-md-10 offset-md-1">
-                <div class="card">
-                    <div class="card-header">
-                        <h2>{{=flyer.title}}</h2>
-                        <p class="mb-0 text-muted">
-                            Published by: {{=participant.real_name}}<br>
-                            Views: {{=flyer.view_count}} | 
-                            Created: {{=flyer.created_on.strftime('%Y-%m-%d')}}
-                        </p>
+            <div class="col-lg-8 offset-lg-2">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom py-4">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h1 class="display-6 fw-bold text-dark mb-2">{{=flyer.title}}</h1>
+                                <p class="text-muted mb-0">
+                                    <i class="bi bi-person-circle"></i> 
+                                    <strong>{{=participant.real_name}}</strong>
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-light text-secondary rounded-pill border">
+                                    {{=flyer.view_count}} views
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div style="white-space: pre-wrap;">{{=flyer.thecontent}}</div>
+                    
+                    <div class="card-body p-4 p-md-5">
+                        {{# white-space: pre-wrap handles basic line breaks from your text editor}}
+                        <div class="flyer-content lead text-secondary" style="white-space: pre-wrap; line-height: 1.6;">
+                            {{=flyer.thecontent}}
+                        </div>
                     </div>
-                    <div class="card-footer text-muted">
-                        <small>Last updated: {{=flyer.updated_on.strftime('%Y-%m-%d %H:%M')}}</small>
+                    
+                    <div class="card-footer bg-light border-0 py-3 text-center">
+                        <small class="text-muted italic">
+                            Published {{=flyer.created_on.strftime('%B %d, %Y')}} 
+                            &bull; 
+                            Updated {{=flyer.updated_on.strftime('%H:%M')}}
+                        </small>
                     </div>
+                </div>
+                
+                <div class="mt-4 text-center">
+                    <button onclick="window.print()" class="btn btn-link text-decoration-none text-muted">
+                        <small>Print this flyer</small>
+                    </button>
                 </div>
             </div>
         </div>
     {{pass}}
 </div>
+
+<style>
+    /* Subtle hover effect on the main flyer card */
+    .card { transition: transform 0.2s ease-in-out; }
+    .flyer-content { color: #444; font-size: 1.1rem; }
+</style>

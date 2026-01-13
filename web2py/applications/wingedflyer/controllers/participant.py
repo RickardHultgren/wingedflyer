@@ -624,11 +624,12 @@ def view_flyer():
 
     participant = db.participant(flyer.participant_id)
 
-    return dict(
-        flyer=flyer,
-        participant=participant,
-        b2c_id=b2c_id  # <--- This fixes the NameError in the HTML!
-    )
+    #return dict(
+    #    flyer=flyer,
+    #    participant=participant,
+    #    b2c_id=b2c_id  # <--- This fixes the NameError in the HTML!
+    #)
+    return dict(flyer=flyer, participant=participant, error=None)
 
 
 
