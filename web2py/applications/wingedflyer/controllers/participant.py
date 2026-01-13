@@ -625,7 +625,8 @@ def view_flyer():
     # Track view
     db.flyer_view.insert(
         flyer_id=flyer_id,
-        viewer_ip=request.client
+        viewer_ip=request.client,
+        b2c_id=b2c_id
     )
 
     # Get participant info
