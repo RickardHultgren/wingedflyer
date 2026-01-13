@@ -653,9 +653,10 @@ def profile():
     """View and edit participant profile"""
     participant_record = db.participant(session.participant_id)
 
-    # Fetch the context name to prevent the NameError
-    context_record = db.context(session.context_id)
-    context_name = context_record.name if context_record else "Unknown"
+    # 1. Fetch the context name from the database
+    # This prevents the NameError: context_name is not defined
+    context_row = db.context(session.context_id)
+    context_name = context_row.name if context_row else "Default Context"
 
     form = SQLFORM(db.participant, participant_record,
                    fields=['real_name', 'username', 'password_hash', 'address',
@@ -668,12 +669,13 @@ def profile():
 
     participant_label = get_language(session.context_id, 'participant', 'label')
 
+    # 2. Add both context_name and b2c_id to the return dict
     return dict(
         form=form,
         participant=participant_record,
         participant_label=participant_label,
-        context_name=context_name,  # <--- Added this
-        b2c_id=session.participant_id # <--- Added this to satisfy sidebar logic
+        context_name=context_name,        # Fixes current error
+        b2c_id=session.participant_id    # Fixes sidebar error
     )
 
 
