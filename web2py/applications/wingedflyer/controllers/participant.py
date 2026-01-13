@@ -600,47 +600,35 @@ def delete_flyer():
 # ---------------------------------------------------------------------
 
 def view_flyer():
-    # ... your existing code at the top ...
     flyer_id = request.args(0, cast=int)
     if not flyer_id:
         return dict(error="Flyer not found")
 
-    # 1. DEFINE b2c_id HERE (The missing piece)
-    # We look for it in the URL variables; if not there, it's None
-    b2c_id = request.vars.b2c_id or None
-    participant_id = request.vars.b2c_id or None
+    # Get the attributing participant from the URL (e.g., ?p_id=5)
+    # Using p_id in the URL to avoid confusion with the flyer's creator
+    p_id = request.vars.p_id or None 
 
     flyer = db.flyer(flyer_id)
-    # ... logic for public check ...
+    if not flyer or not flyer.is_public:
+        return dict(error="Flyer not found or not public")
 
-    # 2. TRACK VIEW (This is where line 629 was crashing)
+    # Increment count
+    flyer.update_record(view_count=flyer.view_count + 1)
+
+    # Track view with the attribution ID
     db.flyer_view.insert(
         flyer_id=flyer_id,
-        viewer_ip=request.client#,
-        #b2c_id=participant_id   # Now Python knows what b2c_id is!
+        viewer_ip=request.client,
+        participant_id=p_id  # Matches the new field in db.py
     )
-
-    # ... rest of the function ...
-    participant = db.participant(flyer.participant_id)
-
-    return dict(
-        flyer=flyer,
-        participant=participant,
-        flyer_label=flyer_label,
-        b2c_id=participant_id
-    )
-
-
 
     participant = db.participant(flyer.participant_id)
 
     return dict(
         flyer=flyer,
         participant=participant,
-        flyer_label=flyer_label,
-        b2c_id=b2c_id # 3. Now it is defined and won't crash the view
+        p_id=p_id  # Pass to view so links can persist the ID
     )
-
 # ---------------------------------------------------------------------
 # PROFILE MANAGEMENT
 # ---------------------------------------------------------------------

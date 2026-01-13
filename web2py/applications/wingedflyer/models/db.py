@@ -402,9 +402,9 @@ db.flyer.thecontent.requires = IS_NOT_EMPTY(error_message='Content required')
 db.define_table('flyer_view',
     Field('flyer_id', 'reference flyer', notnull=True),
     Field('viewer_ip', 'string'),
+     Field('participant_id', 'reference participant'), 
     Field('viewed_on', 'datetime', default=request.now)
 )
-
 ############################################################
 # 8. HELPER FUNCTIONS
 ############################################################
