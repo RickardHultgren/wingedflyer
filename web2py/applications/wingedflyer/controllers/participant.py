@@ -567,6 +567,10 @@ def edit_flyer():
         session.flash = "Unauthorized access"
         redirect(URL('flyers'))
 
+    # Define b2c_id here so the sidebar in the view doesn't crash
+    # In this context, it's the logged-in participant
+    b2c_id = session.participant_id 
+
     form = SQLFORM(db.flyer, flyer)
 
     if form.process().accepted:
@@ -576,9 +580,15 @@ def edit_flyer():
 
     flyer_label = get_language(session.context_id, 'flyer', 'label')
 
-    return dict(form=form, flyer=flyer, flyer_label=flyer_label)
+    return dict(
+        form=form, 
+        flyer=flyer, 
+        flyer_label=flyer_label,
+        b2c_id=b2c_id  # <--- Pass this to the view!
+    )
 
 
+    
 @participant_requires_login
 def delete_flyer():
     """Delete a flyer"""
