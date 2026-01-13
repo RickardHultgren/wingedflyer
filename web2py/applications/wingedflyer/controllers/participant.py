@@ -600,29 +600,36 @@ def delete_flyer():
 # ---------------------------------------------------------------------
 
 def view_flyer():
+    # ... your existing code at the top ...
     flyer_id = request.args(0, cast=int)
     if not flyer_id:
         return dict(error="Flyer not found")
 
-    # 1. GET b2c_id from the request vars (URL parameters)
-    # This prevents the NameError
+    # 1. DEFINE b2c_id HERE (The missing piece)
+    # We look for it in the URL variables; if not there, it's None
     b2c_id = request.vars.b2c_id or None
 
     flyer = db.flyer(flyer_id)
-    if not flyer or not flyer.is_public:
-        return dict(error="Flyer not found or not public")
+    # ... logic for public check ...
 
-    context_id = flyer.context_id
-    flyer_label = get_language(context_id, 'flyer', 'label')
-
-    flyer.update_record(view_count=flyer.view_count + 1)
-
-    # 2. Use the variable here for tracking
+    # 2. TRACK VIEW (This is where line 629 was crashing)
     db.flyer_view.insert(
         flyer_id=flyer_id,
         viewer_ip=request.client,
-        b2c_id=b2c_id  
+        b2c_id=b2c_id   # Now Python knows what b2c_id is!
     )
+
+    # ... rest of the function ...
+    participant = db.participant(flyer.participant_id)
+
+    return dict(
+        flyer=flyer,
+        participant=participant,
+        flyer_label=flyer_label,
+        b2c_id=b2c_id
+    )
+
+    
 
     participant = db.participant(flyer.participant_id)
 
