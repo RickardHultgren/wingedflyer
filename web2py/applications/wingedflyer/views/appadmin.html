@@ -159,16 +159,39 @@ jQuery(document).ready(function(){
         </div>
       </div>
 
+
+
+{{elif request.function == 'managelanguage':}}
+      <div class="row">
+          <div class="col-md-9">
+              <h2><i class="glyphicon glyphicon-globe"></i> {{=T("Feature Language Mappings")}}</h2>
+          </div>
+          <div class="col-md-3 text-right" style="padding-top: 25px;">
+              <a class="btn btn-default" href="{{=URL('index')}}">
+                  <i class="glyphicon glyphicon-arrow-left"></i> {{=T("Back to Admin")}}
+                </a>
+          </div>
+      </div>
+
+      <div class="panel panel-default" style="margin-top: 20px;">
+        <div class="panel-body">
+          <div class="web2py_grid">
+              {{# This safely gets 'grid' or returns nothing if it's missing }}
+              {{=locals().get('grid', '')}}
+          </div>
+        </div>
+      </div>
+
   {{elif request.function in ['select', 'insert', 'update']:}}
     <h2>{{=T("Database Task:")}} {{=request.function.capitalize()}}</h2>
     <div class="well">
-        {{=form}}
-        {{=grid}}
-        {{=rows}}
+        {{# Safely render whichever component the controller actually sent }}
+        {{=locals().get('form', '')}}
+        {{=locals().get('grid', '')}}
+        {{=locals().get('rows', '') if not isinstance(locals().get('rows'), list) else ''}}
     </div>
     <a class="btn btn-secondary" href="{{=URL('index')}}">{{=T("Back to Admin")}}</a>
 
   {{pass}}
-
   </div>
 </div>

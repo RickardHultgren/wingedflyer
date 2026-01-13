@@ -136,49 +136,40 @@ def responsible_requires_login(func):
 
 @responsible_requires_login
 def dashboard():
-    """
-    Dashboard showing all participants with their recent signals.
-    
-    CONTEXT-AWARE ANNOTATION:
-    The dashboard mechanic is identical across contexts:
-    - Show all participants managed by this responsible entity
-    - Highlight participants needing attention (based on signals)
-    - Show instruction status (unread/pending responses)
-    
-    Only the language changes per context.
-    """
     responsible_record = db.responsible(session.responsible_id)
     if not responsible_record:
         session.clear()
         redirect(URL('login'))
 
     # Get context-specific language
+    # Ensure get_language is defined in your models or here!
     participant_label = get_language(session.context_id, 'participant', 'label')
     participant_label_plural = get_language(session.context_id, 'participant', 'label_plural')
 
-    # Get all participants with their recent signal counts
     participants = db(
         (db.participant.responsible_id == session.responsible_id) &
         (db.participant.context_id == session.context_id)
     ).select(orderby=db.participant.real_name)
 
-    # For each participant, get signal summary and instruction status
     participant_data = []
+    now = datetime.now()
+    seven_days_ago = (now - timedelta(days=7)).date()
+
     for p in participants:
-        # Count signals with 'WORSE' outcome in last 7 days
+        # 1. Recent Worse Signals
         recent_worse = db(
             (db.execution_signal.participant_id == p.id) &
             (db.execution_signal.outcome == 'WORSE') &
-            (db.execution_signal.signal_date >= (datetime.now() - timedelta(days=7)).date())
+            (db.execution_signal.signal_date >= seven_days_ago)
         ).count()
 
-        # Count unread instructions
+        # 2. Unread Instructions
         unread_instructions = db(
             (db.instruction_recipient.participant_id == p.id) &
             (db.instruction_recipient.is_read == False)
         ).count()
 
-        # Count pending responses (instructions with response templates that haven't been responded to)
+        # 3. Pending Responses (Fixed Join Query)
         pending_responses = db(
             (db.instruction_recipient.participant_id == p.id) &
             (db.instruction_recipient.response == None) &
@@ -191,13 +182,12 @@ def dashboard():
             'recent_worse_signals': recent_worse,
             'unread_instructions': unread_instructions,
             'pending_responses': pending_responses,
-            'needs_attention': recent_worse > 2
+            'needs_attention': recent_worse > 2 or pending_responses > 0
         })
     
-    can_create = db(
-        (db.participant.responsible_id == session.responsible_id) &
-        (db.participant.context_id == session.context_id)
-    ).count() < responsible_record.participant_limit
+    # Calculate if they can create more participants
+    current_count = len(participants)
+    can_create = current_count < (responsible_record.participant_limit or 0)
 
     return dict(
         responsible=session.responsible_name,
@@ -208,7 +198,7 @@ def dashboard():
         participant_label_plural=participant_label_plural
     )
 
-
+    
 # ---------------------------------------------------------------------
 # CREATE NEW PARTICIPANT (formerly CREATE B2C)
 # ---------------------------------------------------------------------
