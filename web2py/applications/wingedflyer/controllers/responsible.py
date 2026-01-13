@@ -141,10 +141,13 @@ def dashboard():
         session.clear()
         redirect(URL('login'))
 
-    # Get context-specific language
-    # Ensure get_language is defined in your models or here!
+# 1. Get ALL context-specific language labels needed for the dashboard
     participant_label = get_language(session.context_id, 'participant', 'label')
     participant_label_plural = get_language(session.context_id, 'participant', 'label_plural')
+    
+    # Adding the missing labels here:
+    execution_signal_label = get_language(session.context_id, 'execution_signal', 'label')
+    instruction_label = get_language(session.context_id, 'instruction', 'label')
 
     participants = db(
         (db.participant.responsible_id == session.responsible_id) &
@@ -195,7 +198,9 @@ def dashboard():
         participant_data=participant_data,
         can_create=can_create,
         participant_label=participant_label,
-        participant_label_plural=participant_label_plural
+        participant_label_plural=participant_label_plural,
+        execution_signal_label=execution_signal_label, # <--- FIXED
+        instruction_label=instruction_label           # <--- Added for safety
     )
 
     
