@@ -205,21 +205,17 @@ def dashboard():
 
 @responsible_requires_login
 def create_participant():
-    """
-    Create a new participant account.
-    
-    CONTEXT-AWARE ANNOTATION:
-    Participant creation is mechanically identical across contexts.
-    Only field labels and validation messages need context-specific language.
-    """
     responsible_record = db.responsible(session.responsible_id)
     current_count = db(
         (db.participant.responsible_id == session.responsible_id) &
         (db.participant.context_id == session.context_id)
     ).count()
 
+    # Define BOTH labels at the start so they are ALWAYS available
+    participant_label = get_language(session.context_id, 'participant', 'label')
+    participant_label_plural = get_language(session.context_id, 'participant', 'label_plural')
+
     if current_count >= responsible_record.participant_limit:
-        participant_label_plural = get_language(session.context_id, 'participant', 'label_plural')
         session.flash = "Maximum %s limit reached (%d)" % (participant_label_plural, responsible_record.participant_limit)
         redirect(URL('dashboard'))
 
@@ -233,18 +229,16 @@ def create_participant():
     form.vars.context_id = session.context_id
 
     if form.process().accepted:
-        participant_label = get_language(session.context_id, 'participant', 'label')
         session.flash = "%s account created successfully" % participant_label
         redirect(URL('participant', args=[form.vars.id]))
 
-    participant_label = get_language(session.context_id, 'participant', 'label')
     return dict(
         form=form,
         current_count=current_count,
         max_accounts=responsible_record.participant_limit,
-        participant_label=participant_label
+        participant_label=participant_label,
+        participant_label_plural=participant_label_plural  # <--- MUST BE INCLUDED HERE
     )
-
 
 # ---------------------------------------------------------------------
 # INSTRUCTION COMPOSER (formerly COMPOSE INFO_FLYER)
