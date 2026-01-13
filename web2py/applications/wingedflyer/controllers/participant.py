@@ -626,7 +626,6 @@ def view_flyer():
     db.flyer_view.insert(
         flyer_id=flyer_id,
         viewer_ip=request.client,
-        b2c_id=b2c_id
     )
 
     # Get participant info
@@ -635,7 +634,9 @@ def view_flyer():
     return dict(
         flyer=flyer,
         participant=participant,
-        flyer_label=flyer_label
+        flyer_label=flyer_label,
+
+        b2c_id=b2c_id
     )
 
 
