@@ -135,13 +135,36 @@ def responsible_requires_login(func):
 # ---------------------------------------------------------------------
 
 @responsible_requires_login
+@participant_requires_login
 def dashboard():
+    participant = db.participant(session.participant_id)
+    if not participant:
+        redirect(URL('login'))
+
+    # 1. Fetch ALL required labels for the Participant view
+    # Make sure you fetch every label the HTML asks for
+    labels = {
+        'execution_signal_label': get_language(participant.context_id, 'execution_signal', 'label'),
+        'execution_signal_label_plural': get_language(participant.context_id, 'execution_signal', 'label_plural'),
+        'work_activity_label': get_language(participant.context_id, 'work_activity', 'label'),
+        'work_activity_label_plural': get_language(participant.context_id, 'work_activity', 'label_plural'),
+        'instruction_label_plural': get_language(participant.context_id, 'instruction', 'label_plural'),
+        'responsible_label': get_language(participant.context_id, 'responsible', 'label'),
+        'metric1_label': get_language(participant.context_id, 'metric1', 'label'),
+        'metric2_label': get_language(participant.context_id, 'metric2', 'label'),
+    }
+
+    # 2. Existing logic for signals, instructions, etc.
+    recent_signals = db(db.execution_signal.participant_id == participant.id).select(limitby=(0, 5))
+    unread_instructions = db((db.instruction_recipient.participant_id == participant.id) & 
+                             (db.instruction_recipient.is_read == False)).select()
+
     responsible_record = db.responsible(session.responsible_id)
     if not responsible_record:
         session.clear()
         redirect(URL('login'))
 
-# 1. Get ALL context-specific language labels needed for the dashboard
+    # 1. Get ALL context-specific language labels needed for the dashboard
     participant_label = get_language(session.context_id, 'participant', 'label')
     participant_label_plural = get_language(session.context_id, 'participant', 'label_plural')
     
@@ -192,17 +215,18 @@ def dashboard():
     current_count = len(participants)
     can_create = current_count < (responsible_record.participant_limit or 0)
 
+    # 3. Combine your data and the labels in the return dict
     return dict(
-        responsible=session.responsible_name,
+        participant=participant,
         context_name=session.context_name,
-        participant_data=participant_data,
-        can_create=can_create,
-        participant_label=participant_label,
-        participant_label_plural=participant_label_plural,
-        execution_signal_label=execution_signal_label, # <--- FIXED
-        instruction_label=instruction_label           # <--- Added for safety
+        responsible_name=session.responsible_name,
+        work_activities=[], # Add your actual query here
+        recent_signals=recent_signals,
+        unread_instructions=unread_instructions,
+        pending_responses=[], # Add your actual query here
+        balance=0,            # Add your actual calculation here
+        **labels              # This "unpacks" all the labels into the dictionary
     )
-
     
 # ---------------------------------------------------------------------
 # CREATE NEW PARTICIPANT (formerly CREATE B2C)
