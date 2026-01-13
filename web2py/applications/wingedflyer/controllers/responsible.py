@@ -135,67 +135,50 @@ def responsible_requires_login(func):
 # ---------------------------------------------------------------------
 
 @responsible_requires_login
-@participant_requires_login
 def dashboard():
-    participant = db.participant(session.participant_id)
-    if not participant:
-        redirect(URL('login'))
-
-    # 1. Fetch ALL required labels for the Participant view
-    # Make sure you fetch every label the HTML asks for
-    labels = {
-        'execution_signal_label': get_language(participant.context_id, 'execution_signal', 'label'),
-        'execution_signal_label_plural': get_language(participant.context_id, 'execution_signal', 'label_plural'),
-        'work_activity_label': get_language(participant.context_id, 'work_activity', 'label'),
-        'work_activity_label_plural': get_language(participant.context_id, 'work_activity', 'label_plural'),
-        'instruction_label_plural': get_language(participant.context_id, 'instruction', 'label_plural'),
-        'responsible_label': get_language(participant.context_id, 'responsible', 'label'),
-        'metric1_label': get_language(participant.context_id, 'metric1', 'label'),
-        'metric2_label': get_language(participant.context_id, 'metric2', 'label'),
-    }
-
-    # 2. Existing logic for signals, instructions, etc.
-    recent_signals = db(db.execution_signal.participant_id == participant.id).select(limitby=(0, 5))
-    unread_instructions = db((db.instruction_recipient.participant_id == participant.id) & 
-                             (db.instruction_recipient.is_read == False)).select()
-
+    """
+    Dashboard showing all participants with their recent signals.
+    
+    CONTEXT-AWARE ANNOTATION:
+    The dashboard mechanic is identical across contexts:
+    - Show all participants managed by this responsible entity
+    - Highlight participants needing attention (based on signals)
+    - Show instruction status (unread/pending responses)
+    
+    Only the language changes per context.
+    """
     responsible_record = db.responsible(session.responsible_id)
     if not responsible_record:
         session.clear()
         redirect(URL('login'))
 
-    # 1. Get ALL context-specific language labels needed for the dashboard
+    # Get context-specific language
     participant_label = get_language(session.context_id, 'participant', 'label')
     participant_label_plural = get_language(session.context_id, 'participant', 'label_plural')
-    
-    # Adding the missing labels here:
-    execution_signal_label = get_language(session.context_id, 'execution_signal', 'label')
-    instruction_label = get_language(session.context_id, 'instruction', 'label')
 
+    # Get all participants with their recent signal counts
     participants = db(
         (db.participant.responsible_id == session.responsible_id) &
         (db.participant.context_id == session.context_id)
     ).select(orderby=db.participant.real_name)
 
+    # For each participant, get signal summary and instruction status
     participant_data = []
-    now = datetime.now()
-    seven_days_ago = (now - timedelta(days=7)).date()
-
     for p in participants:
-        # 1. Recent Worse Signals
+        # Count signals with 'WORSE' outcome in last 7 days
         recent_worse = db(
             (db.execution_signal.participant_id == p.id) &
             (db.execution_signal.outcome == 'WORSE') &
-            (db.execution_signal.signal_date >= seven_days_ago)
+            (db.execution_signal.signal_date >= (datetime.now() - timedelta(days=7)).date())
         ).count()
 
-        # 2. Unread Instructions
+        # Count unread instructions
         unread_instructions = db(
             (db.instruction_recipient.participant_id == p.id) &
             (db.instruction_recipient.is_read == False)
         ).count()
 
-        # 3. Pending Responses (Fixed Join Query)
+        # Count pending responses (instructions with response templates that haven't been responded to)
         pending_responses = db(
             (db.instruction_recipient.participant_id == p.id) &
             (db.instruction_recipient.response == None) &
@@ -208,43 +191,45 @@ def dashboard():
             'recent_worse_signals': recent_worse,
             'unread_instructions': unread_instructions,
             'pending_responses': pending_responses,
-            'needs_attention': recent_worse > 2 or pending_responses > 0
+            'needs_attention': recent_worse > 2
         })
     
-    # Calculate if they can create more participants
-    current_count = len(participants)
-    can_create = current_count < (responsible_record.participant_limit or 0)
+    can_create = db(
+        (db.participant.responsible_id == session.responsible_id) &
+        (db.participant.context_id == session.context_id)
+    ).count() < responsible_record.participant_limit
 
-    # 3. Combine your data and the labels in the return dict
     return dict(
-        participant=participant,
+        responsible=session.responsible_name,
         context_name=session.context_name,
-        responsible_name=session.responsible_name,
-        work_activities=[], # Add your actual query here
-        recent_signals=recent_signals,
-        unread_instructions=unread_instructions,
-        pending_responses=[], # Add your actual query here
-        balance=0,            # Add your actual calculation here
-        **labels              # This "unpacks" all the labels into the dictionary
+        participant_data=participant_data,
+        can_create=can_create,
+        participant_label=participant_label,
+        participant_label_plural=participant_label_plural
     )
-    
+
+
 # ---------------------------------------------------------------------
 # CREATE NEW PARTICIPANT (formerly CREATE B2C)
 # ---------------------------------------------------------------------
 
 @responsible_requires_login
 def create_participant():
+    """
+    Create a new participant account.
+    
+    CONTEXT-AWARE ANNOTATION:
+    Participant creation is mechanically identical across contexts.
+    Only field labels and validation messages need context-specific language.
+    """
     responsible_record = db.responsible(session.responsible_id)
     current_count = db(
         (db.participant.responsible_id == session.responsible_id) &
         (db.participant.context_id == session.context_id)
     ).count()
 
-    # Define BOTH labels at the start so they are ALWAYS available
-    participant_label = get_language(session.context_id, 'participant', 'label')
-    participant_label_plural = get_language(session.context_id, 'participant', 'label_plural')
-
     if current_count >= responsible_record.participant_limit:
+        participant_label_plural = get_language(session.context_id, 'participant', 'label_plural')
         session.flash = "Maximum %s limit reached (%d)" % (participant_label_plural, responsible_record.participant_limit)
         redirect(URL('dashboard'))
 
@@ -258,16 +243,18 @@ def create_participant():
     form.vars.context_id = session.context_id
 
     if form.process().accepted:
+        participant_label = get_language(session.context_id, 'participant', 'label')
         session.flash = "%s account created successfully" % participant_label
         redirect(URL('participant', args=[form.vars.id]))
 
+    participant_label = get_language(session.context_id, 'participant', 'label')
     return dict(
         form=form,
         current_count=current_count,
         max_accounts=responsible_record.participant_limit,
-        participant_label=participant_label,
-        participant_label_plural=participant_label_plural  # <--- MUST BE INCLUDED HERE
+        participant_label=participant_label
     )
+
 
 # ---------------------------------------------------------------------
 # INSTRUCTION COMPOSER (formerly COMPOSE INFO_FLYER)
