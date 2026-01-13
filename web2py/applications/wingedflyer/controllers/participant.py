@@ -141,75 +141,49 @@ def participant_requires_login(func):
     return wrapper
 
 
-# ---------------------------------------------------------------------
-# PARTICIPANT DASHBOARD
-# ---------------------------------------------------------------------
-
 @participant_requires_login
 def dashboard():
-    """
-    Participant dashboard showing:
-    - Recent execution signals
-    - Unread instructions
-    - Work activities
-    - Context-specific metrics
-    
-    CONTEXT-AWARE ANNOTATION:
-    Dashboard mechanics are universal - only language and metric
-    interpretation differ per context.
-    """
     participant_record = db.participant(session.participant_id)
     if not participant_record:
         session.clear()
         redirect(URL('login'))
 
-    # Get context-specific language
+    # 1. Fetch ALL labels (Singular and Plural) to satisfy the HTML View
+    work_activity_label = get_language(session.context_id, 'work_activity', 'label')
     work_activity_label_plural = get_language(session.context_id, 'work_activity', 'label_plural')
+    
+    execution_signal_label = get_language(session.context_id, 'execution_signal', 'label')
     execution_signal_label_plural = get_language(session.context_id, 'execution_signal', 'label_plural')
+    
+    instruction_label = get_language(session.context_id, 'instruction', 'label')
     instruction_label_plural = get_language(session.context_id, 'instruction', 'label_plural')
+    
     responsible_label = get_language(session.context_id, 'responsible', 'label')
 
-    # Get work activities
+    # 2. Metrics & Logic
     work_activities = db(
         (db.work_activity.participant_id == session.participant_id) &
         (db.work_activity.context_id == session.context_id)
     ).select(orderby=~db.work_activity.is_active|db.work_activity.activity_name)
 
-    # Get recent execution signals (last 7 days)
+    # Date math
+    seven_days_ago = (datetime.now() - timedelta(days=7)).date()
+
     recent_signals = db(
         (db.execution_signal.participant_id == session.participant_id) &
         (db.execution_signal.context_id == session.context_id) &
-        (db.execution_signal.signal_date >= (datetime.now() - timedelta(days=7)).date())
+        (db.execution_signal.signal_date >= seven_days_ago)
     ).select(
         db.execution_signal.ALL,
         db.work_activity.activity_name,
-        left=db.work_activity.on(
-            db.execution_signal.work_activity_id == db.work_activity.id
-        ),
+        left=db.work_activity.on(db.execution_signal.work_activity_id == db.work_activity.id),
         orderby=~db.execution_signal.signal_date,
         limitby=(0, 10)
     )
 
-    # Get unread instructions
     unread_instructions = db(
         (db.instruction_recipient.participant_id == session.participant_id) &
-        (db.instruction_recipient.context_id == session.context_id) &
         (db.instruction_recipient.is_read == False)
-    ).select(
-        db.instruction_recipient.ALL,
-        db.instruction.ALL,
-        left=db.instruction.on(db.instruction_recipient.instruction_id == db.instruction.id),
-        orderby=~db.instruction.created_on,
-        limitby=(0, 5)
-    )
-
-    # Get pending response instructions
-    pending_responses = db(
-        (db.instruction_recipient.participant_id == session.participant_id) &
-        (db.instruction_recipient.context_id == session.context_id) &
-        (db.instruction_recipient.response == None) &
-        (db.instruction.id == db.instruction_recipient.instruction_id) &
-        (db.instruction.response_template != 'NONE')
     ).select(
         db.instruction_recipient.ALL,
         db.instruction.ALL,
@@ -217,10 +191,21 @@ def dashboard():
         orderby=~db.instruction.created_on
     )
 
+    pending_responses = db(
+        (db.instruction_recipient.participant_id == session.participant_id) &
+        (db.instruction_recipient.response == None) &
+        (db.instruction.id == db.instruction_recipient.instruction_id) &
+        (db.instruction.response_template != 'NONE')
+    ).select(db.instruction_recipient.ALL, db.instruction.ALL)
+
     # Context-specific metrics
     metric1_label = get_language(session.context_id, 'metric_allocated', 'label') or "Allocated"
     metric2_label = get_language(session.context_id, 'metric_completed', 'label') or "Completed"
-    balance = participant_record.amount_borrowed - participant_record.amount_repaid_b2c_reported
+    
+    # Ensure numerical values exist to avoid TypeError
+    borrowed = participant_record.amount_borrowed or 0
+    repaid = participant_record.amount_repaid_b2c_reported or 0
+    balance = borrowed - repaid
 
     return dict(
         participant=participant_record,
@@ -231,15 +216,18 @@ def dashboard():
         balance=balance,
         context_name=session.context_name,
         responsible_name=session.responsible_name,
+        # Labels sent to view
+        work_activity_label=work_activity_label,
         work_activity_label_plural=work_activity_label_plural,
+        execution_signal_label=execution_signal_label,
         execution_signal_label_plural=execution_signal_label_plural,
+        instruction_label=instruction_label,
         instruction_label_plural=instruction_label_plural,
         responsible_label=responsible_label,
         metric1_label=metric1_label,
         metric2_label=metric2_label
     )
-
-
+    
 # ---------------------------------------------------------------------
 # WORK ACTIVITIES
 # ---------------------------------------------------------------------
