@@ -604,22 +604,22 @@ def view_flyer():
     if not flyer_id:
         return dict(error="Flyer not found")
 
-    # Get the attributing participant from the URL (e.g., ?p_id=5)
-    # Using p_id in the URL to avoid confusion with the flyer's creator
-    p_id = request.vars.p_id or None 
+    # Pull the tracking ID from the URL if it exists
+    # We'll use the name 'b2c_id' to satisfy the existing View logic
+    b2c_id = request.vars.b2c_id or None
 
     flyer = db.flyer(flyer_id)
     if not flyer or not flyer.is_public:
         return dict(error="Flyer not found or not public")
 
-    # Increment count
+    # Increment view count
     flyer.update_record(view_count=flyer.view_count + 1)
 
-    # Track view with the attribution ID
+    # Track view in your new flyer_view table
     db.flyer_view.insert(
         flyer_id=flyer_id,
         viewer_ip=request.client,
-        participant_id=p_id  # Matches the new field in db.py
+        participant_id=b2c_id  # This maps the URL var to your DB column
     )
 
     participant = db.participant(flyer.participant_id)
@@ -627,8 +627,12 @@ def view_flyer():
     return dict(
         flyer=flyer,
         participant=participant,
-        p_id=p_id  # Pass to view so links can persist the ID
+        b2c_id=b2c_id  # <--- This fixes the NameError in the HTML!
     )
+
+
+
+
 # ---------------------------------------------------------------------
 # PROFILE MANAGEMENT
 # ---------------------------------------------------------------------
